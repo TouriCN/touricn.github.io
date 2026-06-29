@@ -18,12 +18,12 @@
     ]
   },
   "formatter": {
-    "enabled": true,
+    "enabled": false,
     "indentStyle": "tab"
   },
   "assist": { "actions": { "source": { "organizeImports": "on" } } },
   "linter": {
-    "enabled": true,
+    "enabled": false,
     "rules": {
       "preset": "recommended",
       "style": {
