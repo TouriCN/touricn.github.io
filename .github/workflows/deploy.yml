@@ -1,21 +1,17 @@
 name: Deploy to GitHub Pages
-
 on:
   push:
     branches: [ master ]
   workflow_dispatch:
-
 # Pages 部署需要的权限
 permissions:
   contents: read
   pages: write
   id-token: write
-
 # 确保只有一个部署任务同时运行
 concurrency:
   group: "pages"
   cancel-in-progress: false
-
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -34,20 +30,35 @@ jobs:
           version: 9.14.4
           run_install: false
           
+      - name: Get pnpm store directory
+        id: pnpm-cache
+        shell: bash
+        run: |
+          echo "STORE_PATH=$(pnpm store path)" >> $GITHUB_OUTPUT
+          
+      - name: Setup pnpm cache
+        uses: actions/cache@v4
+        with:
+          path: ${{ steps.pnpm-cache.outputs.STORE_PATH }}
+          key: ${{ runner.os }}-pnpm-store-${{ hashFiles('**/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-store-
+          
       - name: Install dependencies
-        run: pnpm install --no-frozen-lockfile
+        run: pnpm install --frozen-lockfile
       
       - name: Build site
         run: pnpm run build
-
+        env:
+          NODE_OPTIONS: --max-old-space-size=4096
+      
       - name: Create .nojekyll file
         run: touch dist/.nojekyll
       
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: dist  # Astro默认构建输出目录
-
+          path: dist
   deploy:
     environment:
       name: github-pages
