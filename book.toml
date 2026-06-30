@@ -1,0 +1,20 @@
+[book]
+authors = ["TouriCN"]
+language = "zh-CN"
+title = "TouriCN"
+
+[output.html]
+theme = "theme"
+additional-css = ["theme/custom.css"]
+additional-js  = ["theme/pagetoc.js"]
+
+# GFM 扩展配置
+# 警告框 (Admonitions) - 支持 > [!NOTE]、> [!TIP]、> [!WARNING] 等 GFM 风格语法
+admonitions = true
+# 定义列表支持
+definition-lists = true
+# 禁用智能标点转换 (避免影响 HTML 标签和代码中的标点)
+smart-punctuation = false
+
+[output.html.search]
+enable = true
