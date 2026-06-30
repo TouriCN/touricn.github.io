@@ -36,12 +36,6 @@ jobs:
           pip install feedgen
           pip install markdown
 
-      - name: Generate RSS
-        run: python generate_rss.py
-
-      - name: Generate Sitemap
-        run: python generate_sitemap.py
-
       - name: Collect build metadata
         run: |
           START_DATE="2026-06-18"
@@ -87,6 +81,12 @@ jobs:
 
       - name: Build book
         run: mdbook build
+        
+      - name: Generate RSS
+        run: python generate_rss.py
+
+      - name: Generate Sitemap
+        run: python generate_sitemap.py 
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
