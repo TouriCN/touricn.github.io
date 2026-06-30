@@ -32,7 +32,9 @@ jobs:
         with:
           python-version: "3.12"
       - name: Install Python deps
-        run: pip install feedgen
+        run: |
+          pip install feedgen
+          pip install markdown 
       - name: Generate RSS
         run: python generate_rss.py
       - name: Generate Sitemap
