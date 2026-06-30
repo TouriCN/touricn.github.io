@@ -26,17 +26,17 @@
 至于怎么说。。参考一下上面的
 # 评论区
 <script src="https://giscus.app/client.js"
-        data-repo="TouriCN/TouriCN.github.io"
-        data-repo-id="R_kgDOS-PqIA"
+        data-repo="TouriCN/touricn.github.io"
+        data-repo-id="R_kgDOTIWQrA"
         data-category="Giscus"
-        data-category-id="DIC_kwDOS-PqIM4C_Z6B"
+        data-category-id="DIC_kwDOTIWQrM4DAJJQ"
         data-mapping="pathname"
         data-strict="0"
         data-reactions-enabled="1"
         data-emit-metadata="0"
         data-input-position="top"
-        data-theme="dark"
+        data-theme="preferred_color_scheme"
         data-lang="zh-CN"
         crossorigin="anonymous"
         async>
-</script>
+</script> 
