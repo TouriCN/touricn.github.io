@@ -1,8 +1,8 @@
 # 主页
 <script src="https://keepandroidopen.org/banner.js"></script> 
 ## 内容
-<div style="min-height: 80vh;">
-<object data="https://touricn.github.io/SUMMARY.html" style="border: none;"></object>
+<div class="embed-wrapper">
+<object data="https://touricn.github.io/SUMMARY.html" class="embed-content"></object>
 </div>
 
 
