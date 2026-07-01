@@ -38,19 +38,6 @@ jobs:
       - name: Compile Markdown
         run: python compile.py
 
-      - name: Prepare required files
-        run: |
-          mkdir -p src
-          if [ -f "src/index.md" ]; then
-            cp src/index.md src/README.md
-          elif [ -f "index.html" ]; then
-            cp index.html src/README.md
-          else
-            touch src/README.md
-          fi
-          touch rss.xml
-          touch sitemap.xml
-
       - name: Generate RSS
         run: python generate_rss.py
 
