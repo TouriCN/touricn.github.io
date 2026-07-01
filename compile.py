@@ -6,8 +6,7 @@ SRC_DIR = "src"
 
 def preprocess_github_admonitions(md_content):
     """
-    把 GitHub 的 > [!TIP] 直接转成纯 HTML 提示框
-    不依赖任何第三方扩展
+    只处理 GitHub 风格的 > [!TIP]，不影响普通引用块
     """
     lines = md_content.split('\n')
     result = []
@@ -18,6 +17,7 @@ def preprocess_github_admonitions(md_content):
         line = lines[i]
         stripped = line.strip()
 
+        # ✅ 严格匹配 GitHub 警告框：> [!TIP]
         if stripped.startswith('> [!') and stripped.endswith(']'):
             match = re.search(r'\[!([A-Z]+)\]', stripped)
             if match:
@@ -43,9 +43,11 @@ def preprocess_github_admonitions(md_content):
                 result.append('</div>')
                 result.append('')
             else:
+                # ✅ 不匹配的，原样保留（让 Markdown 解析普通引用）
                 result.append(line)
                 i += 1
         else:
+            # ✅ 普通行，原样保留
             result.append(line)
             i += 1
 
@@ -75,7 +77,7 @@ def compile_markdown():
             ]
         )
         
-        # ✅ README.md → index.html，其他 .md 正常输出
+        # README.md → index.html
         if filename == "README.md":
             html_filename = "index.html"
         else:
@@ -88,7 +90,7 @@ def compile_markdown():
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{filename.replace('.md', '')}</title>
+    <title>{filename.replace('.md', '')}-TouriCN</title>
     <style>
         :root {{
             color-scheme: light dark;
@@ -106,9 +108,27 @@ def compile_markdown():
         table {{ border-collapse: collapse; margin: 1em 0; }}
         th, td {{ border: 1px solid var(--border); padding: 6px 10px; }}
         pre, code {{ background: rgba(128,128,128,0.15); padding: 2px 6px; border-radius: 4px; }}
-        blockquote {{ margin: 1em 0; padding: 10px 15px; border-left: 4px solid var(--border); background: rgba(128,128,128,0.08); }}
-        .admonition {{ border-left: 4px solid var(--border); padding: 10px 15px; margin: 1em 0; background: rgba(128,128,128,0.08); }}
-        .admonition-title {{ font-weight: bold; margin-bottom: 6px; }}
+        
+        /* ✅ 普通引用块 */
+        blockquote {{
+            margin: 1em 0;
+            padding: 10px 15px;
+            border-left: 4px solid var(--border);
+            background: rgba(128, 128, 128, 0.08);
+        }}
+        
+        /* ✅ 警告框 */
+        .admonition {{
+            border-left: 4px solid var(--border);
+            padding: 10px 15px;
+            margin: 1em 0;
+            background: rgba(128, 128, 128, 0.08);
+        }}
+        .admonition-title {{
+            font-weight: bold;
+            margin-bottom: 6px;
+        }}
+        
         .theme-switcher {{
             position: fixed; top: 10px; right: 10px; z-index: 999;
             background: var(--bg); border: 1px solid var(--border);
