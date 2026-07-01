@@ -7,7 +7,7 @@ from urllib.parse import urljoin
 
 SITE_URL = "https://touricn.github.io"
 SUMMARY = "src/SUMMARY.md"
-OUT_FILE = "book/rss.xml"
+OUT_FILE = "rss.xml"
 SITE_TITLE = "TouriCN"
 SITE_DESCRIPTION = "这绝对是史上最神人的站点。"
 
