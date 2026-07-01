@@ -2,7 +2,7 @@ name: Deploy Static Site (Root Output)
 
 on:
   push:
-    branches: [master]
+    branches: [main]
 
 permissions:
   contents: read
