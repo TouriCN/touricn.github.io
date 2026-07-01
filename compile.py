@@ -47,65 +47,74 @@ def preprocess_github_admonitions(md_content):
 
     return '\n'.join(result)
 
-def fix_internal_links(html_content):
+def fix_internal_links(html_content, current_dir=""):
     """
-    ✅ 将内部 .md 链接自动转换为 .html
-    ✅ 不影响外部链接和锚点
+    ✅ 自动转换内部 .md 链接为 .html
+    ✅ 支持多级目录的相对路径
     """
-    # 匹配 href="xxx.md" 或 href='xxx.md'
     pattern = r'href=["\']([^"\']+\.md)["\']'
     
     def replace_link(match):
-        full_match = match.group(0)  # 完整匹配，如 href="friends.md"
-        path = match.group(1)        # 路径部分，如 friends.md
+        full_match = match.group(0)
+        path = match.group(1)
+        
+        if path.startswith('/'):
+            path = path[1:]
+        
         html_path = path.replace('.md', '.html')
-        # 保持原有的引号和格式
+        
+        if current_dir:
+            html_path = os.path.join(current_dir, html_path).replace('\\', '/')
+        
         return full_match.replace(path, html_path)
     
     return re.sub(pattern, replace_link, html_content)
 
 def compile_markdown():
-    os.makedirs(SRC_DIR, exist_ok=True)
-
-    for filename in os.listdir(SRC_DIR):
-        if not filename.endswith(".md"):
-            continue
-
-        md_path = os.path.join(SRC_DIR, filename)
-
-        with open(md_path, "r", encoding="utf-8") as f:
-            md_content = f.read()
-
-        # 1. 预处理警告框
-        processed_md = preprocess_github_admonitions(md_content)
-
-        # 2. Markdown 转 HTML
-        html_body = markdown.markdown(
-            processed_md,
-            extensions=[
-                'markdown.extensions.tables',
-                'markdown.extensions.fenced_code',
-                'markdown.extensions.nl2br',
-                'markdown.extensions.sane_lists',
-            ]
-        )
-
-        # 3. ✅ 自动转换内部链接
-        html_body = fix_internal_links(html_body)
-
-        # README.md → index.html
-        if filename == "README.md":
-            html_filename = "index.html"
-        else:
-            html_filename = filename.replace(".md", ".html")
-
-        html_path = html_filename
-
-        # 标题处理
-        base_title = filename.replace('.md', '')
-        full_title = f"{base_title}-TouriCN"
-
-        full_html = f"""<!DOCTYPE html>
+    """递归编译 src 目录下的所有 .md 文件"""
+    for root, dirs, files in os.walk(SRC_DIR):
+        for filename in files:
+            if not filename.endswith(".md"):
+                continue
+            
+            md_path = os.path.join(root, filename)
+            
+            with open(md_path, "r", encoding="utf-8") as f:
+                md_content = f.read()
+            
+            processed_md = preprocess_github_admonitions(md_content)
+            
+            html_body = markdown.markdown(
+                processed_md,
+                extensions=[
+                    'markdown.extensions.tables',
+                    'markdown.extensions.fenced_code',
+                    'markdown.extensions.nl2br',
+                    'markdown.extensions.sane_lists',
+                ]
+            )
+            
+            rel_path = os.path.relpath(root, SRC_DIR)
+            current_dir = '' if rel_path == '.' else rel_path.replace('\\', '/')
+            
+            html_body = fix_internal_links(html_body, current_dir)
+            
+            if filename == "README.md":
+                html_filename = "index.html"
+            else:
+                html_filename = filename.replace(".md", ".html")
+            
+            if current_dir:
+                output_dir = current_dir
+                os.makedirs(output_dir, exist_ok=True)
+                html_path = os.path.join(output_dir, html_filename)
+            else:
+                html_path = html_filename
+            
+            base_title = filename.replace('.md', '')
+            full_title = f"{base_title}-TouriCN"
+            
+            full_html = f"""<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
@@ -153,12 +162,22 @@ def compile_markdown():
             padding: 4px 8px; font-size: 14px; cursor: pointer; color: var(--text);
         }}
 
-        /* ✅ iframe 样式 */
+        /* ✅ 修复 iframe 显示问题 */
         iframe {{
+            display: block;              /* 关键：确保 iframe 是块级元素 */
+            width: 100%;                 /* 宽度占满容器 */
+            min-height: 400px;           /* 最小高度，避免不可见 */
             max-width: 100%;
             border: 1px solid var(--border);
             background: var(--bg);
             border-radius: 4px;
+            box-sizing: border-box;       /* 确保边框不影响尺寸 */
+        }}
+        
+        /* 确保 iframe 容器正确 */
+        .iframe-container {{
+            margin: 1em 0;
+            overflow: hidden;
         }}
     </style>
 </head>
@@ -178,9 +197,9 @@ def compile_markdown():
 </body>
 </html>"""
 
-        with open(html_path, "w", encoding="utf-8") as f:
-            f.write(full_html)
-        print(f"✅ Compiled {md_path} -> {html_path}")
+            with open(html_path, "w", encoding="utf-8") as f:
+                f.write(full_html)
+            print(f"✅ Compiled {md_path} -> {html_path}")
 
 if __name__ == "__main__":
     compile_markdown()
