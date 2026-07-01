@@ -1,4 +1,4 @@
-name: Deploy Static Site (Root Output)
+name: Deploy Static Site
 
 on:
   push:
@@ -24,9 +24,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          ref: main
 
-      # 1. Python 环境
       - name: Setup Python
         uses: actions/setup-python@v5
         with:
@@ -37,18 +35,32 @@ jobs:
           pip install feedgen
           pip install markdown
 
-      # 2. 编译 Markdown → 根目录 HTML
+      # 1. 编译 Markdown（生成 index.html 等）
       - name: Compile Markdown
         run: python compile.py
 
-      # 3. 生成 RSS/Sitemap → 根目录
+      # ✅ 2. 准备 RSS/Sitemap 所需的“假环境”
+      - name: Prepare required files
+        run: |
+          # 确保 src 目录存在
+          mkdir -p src
+          
+          # 把根目录的 index.html 复制成 src/README.md
+          # RSS 脚本会读取这个文件来获取主页信息
+          cp index.html src/README.md
+          
+          # 确保 rss.xml 和 sitemap.xml 的输出目录（当前目录）是干净的
+          rm -f rss.xml sitemap.xml
+
+      # 3. 生成 RSS（现在 src/README.md 存在了）
       - name: Generate RSS
         run: python generate_rss.py
 
+      # 4. 生成 Sitemap
       - name: Generate Sitemap
         run: python generate_sitemap.py
 
-      # 4. 收集变量（统计根目录的 html 文件）
+      # 5. 收集并注入变量
       - name: Collect build metadata
         run: |
           START_DATE="2026-06-18"
@@ -56,16 +68,16 @@ jobs:
           SHORT_HASH=${GITHUB_SHA::7}
           ACTOR=${{ github.actor }}
           LAST_MSG=$(git log -1 --pretty=%s)
-
-          # ✅ 统计根目录的 .html
+          
+          # 统计根目录的 html 文件
           TOTAL_FILES=$(find . -maxdepth 1 -name "*.html" | wc -l)
           TOTAL_WORDS=$(find . -maxdepth 1 -name "*.html" -exec cat {} \; | wc -c)
           AVG_CHARS=$((TOTAL_WORDS / TOTAL_FILES))
-
+          
           START_SEC=$(date -d "$START_DATE" +%s)
           NOW_SEC=$(date +%s)
           RUN_DAYS=$(( (NOW_SEC - START_SEC) / 86400 ))
-
+          
           echo "BUILD_TIME=$BUILD_TIME" >> $GITHUB_ENV
           echo "SHORT_HASH=$SHORT_HASH" >> $GITHUB_ENV
           echo "ACTOR=$ACTOR" >> $GITHUB_ENV
@@ -75,7 +87,6 @@ jobs:
           echo "AVG_CHARS=$AVG_CHARS" >> $GITHUB_ENV
           echo "RUN_DAYS=$RUN_DAYS" >> $GITHUB_ENV
 
-      # 5. 注入变量到根目录 index.html
       - name: Inject metadata
         run: |
           sed -i "s/{{BUILD_TIME}}/${{ env.BUILD_TIME }}/g" index.html
@@ -87,11 +98,11 @@ jobs:
           sed -i "s/{{AVG_CHARS}}/${{ env.AVG_CHARS }}/g" index.html
           sed -i "s/{{RUN_DAYS}}/${{ env.RUN_DAYS }}/g" index.html
 
-      # 6. 部署根目录
+      # 6. 部署
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: .  # ✅ 直接上传根目录
+          path: .
 
       - name: Deploy
         uses: actions/deploy-pages@v4
