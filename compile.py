@@ -6,7 +6,7 @@ SRC_DIR = "src"
 
 def preprocess_github_admonitions(md_content):
     """
-    把 GitHub 的 > [!TIP] 直接转成纯 HTML
+    把 GitHub 的 > [!TIP] 直接转成纯 HTML 提示框
     不依赖任何第三方扩展
     """
     lines = md_content.split('\n')
@@ -18,7 +18,6 @@ def preprocess_github_admonitions(md_content):
         line = lines[i]
         stripped = line.strip()
 
-        # 匹配 > [!TIP] 这种格式
         if stripped.startswith('> [!') and stripped.endswith(']'):
             match = re.search(r'\[!([A-Z]+)\]', stripped)
             if match:
@@ -26,7 +25,6 @@ def preprocess_github_admonitions(md_content):
                 title = match.group(1)
                 i += 1
 
-                # 收集内容
                 body_parts = []
                 while i < n and lines[i].strip().startswith('>'):
                     content = lines[i].strip()
@@ -34,17 +32,16 @@ def preprocess_github_admonitions(md_content):
                         content = content[2:]
                     elif content.startswith('>'):
                         content = content[1:]
-                    if content:  # 忽略空行
+                    if content:
                         body_parts.append(content)
                     i += 1
 
                 body = ' '.join(body_parts)
-                # 直接输出 HTML
                 result.append(f'<div class="admonition {admon_type}">')
                 result.append(f'  <div class="admonition-title">{title}</div>')
                 result.append(f'  <div>{body}</div>')
                 result.append('</div>')
-                result.append('')  # 空行
+                result.append('')
             else:
                 result.append(line)
                 i += 1
@@ -62,29 +59,31 @@ def compile_markdown():
             continue
             
         md_path = os.path.join(SRC_DIR, filename)
-        html_filename = filename.replace(".md", ".html")
+        
+        with open(md_path, "r", encoding="utf-8") as f:
+            md_content = f.read()
+        
+        processed_md = preprocess_github_admonitions(md_content)
+        
+        html_body = markdown.markdown(
+            processed_md,
+            extensions=[
+                'markdown.extensions.tables',
+                'markdown.extensions.fenced_code',
+                'markdown.extensions.nl2br',
+                'markdown.extensions.sane_lists',
+            ]
+        )
+        
+        # ✅ README.md → index.html，其他 .md 正常输出
+        if filename == "README.md":
+            html_filename = "index.html"
+        else:
+            html_filename = filename.replace(".md", ".html")
+        
         html_path = html_filename
-
-        try:
-            with open(md_path, "r", encoding="utf-8") as f:
-                md_content = f.read()
-
-            # 预处理提示框
-            processed_md = preprocess_github_admonitions(md_content)
-
-            # 只用最基础的 Markdown 扩展，不碰 pymdownx
-            html_body = markdown.markdown(
-                processed_md,
-                extensions=[
-                    'markdown.extensions.tables',
-                    'markdown.extensions.fenced_code',
-                    'markdown.extensions.nl2br',
-                    'markdown.extensions.sane_lists',
-                ]
-            )
-
-            # 完整 HTML 模板
-            full_html = f"""<!DOCTYPE html>
+        
+        full_html = f"""<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
@@ -133,13 +132,9 @@ def compile_markdown():
 </body>
 </html>"""
 
-            with open(html_path, "w", encoding="utf-8") as f:
-                f.write(full_html)
-            print(f"✅ Compiled {md_path}")
-
-        except Exception as e:
-            print(f"❌ FAILED {md_path}: {e}")
-            raise
+        with open(html_path, "w", encoding="utf-8") as f:
+            f.write(full_html)
+        print(f"✅ Compiled {md_path} -> {html_path}")
 
 if __name__ == "__main__":
     compile_markdown()
