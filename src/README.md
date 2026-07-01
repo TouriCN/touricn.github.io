@@ -2,7 +2,7 @@
 <script src="https://keepandroidopen.org/banner.js"></script> 
 ## 目录
 <div id="1">
-<object data="https://touricn.github.io/SUMMARY.html" width="100%" height="500" style="border: none; overflow: hidden;" scrolling="no"></object>
+<object data="https://touricn.github.io/SUMMARY.html" width="100%" height="500" style="border: none; overflow: hidden;"></object>
 </div>
 
 ## 关于此站点
