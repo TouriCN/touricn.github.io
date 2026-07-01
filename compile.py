@@ -6,64 +6,88 @@ SRC_DIR = "src"
 
 def preprocess_github_admonitions(md_content):
     """
-    把 GitHub 风格 > [!TIP] 转成 pymdownx.admonition 认的 !!! tip 格式
-    用逐行状态机，比正则吞块稳
+    将 GitHub 风格的 > [!TIP] 转换为 pymdownx.admonition 支持的 !!! tip 格式
+    专门处理 Markdown + HTML 混合内容，避免误判 HTML 中的 >
     """
     lines = md_content.split('\n')
     result = []
     i = 0
     n = len(lines)
-    
+
     while i < n:
         line = lines[i]
-        # 匹配 > [!TYPE]
-        m = re.match(r'^> \[!([A-Za-z]+)\]', line)
-        if m and line.strip() == f'> [!{m.group(1)}]':
-            admon_type = m.group(1).lower()
-            i += 1
-            # 收集后续 > 开头的行，转成缩进 4 格给 !!! 用
-            body_lines = []
-            while i < n and (lines[i].startswith('> ') or lines[i] == '>'):
-                # 去掉开头的 '> ' 或 '>'
-                stripped = lines[i][2:] if lines[i].startswith('> ') else lines[i][1:]
-                body_lines.append('    ' + stripped)
+        stripped = line.strip()
+        
+        # 严格匹配 GitHub 风格的提示框: > [!TIP]
+        if stripped.startswith('> [!') and stripped.endswith(']'):
+            # 提取提示框类型 (TIP, WARNING, NOTE 等)
+            match = re.search(r'\[!([A-Z]+)\]', stripped)
+            if match:
+                admon_type = match.group(1).lower()
                 i += 1
-            # 输出 !!! tip 格式（pymdownx.admonition 认）
-            result.append(f'!!! {admon_type}')
-            result.extend(body_lines)
-            result.append('')  # 空行分隔
+                
+                # 收集提示框内容（所有以 > 开头的行）
+                body_lines = []
+                while i < n and lines[i].strip().startswith('>'):
+                    # 去掉开头的 '> ' 或 '>'，添加 4 个空格缩进
+                    content_line = lines[i].strip()
+                    if content_line.startswith('> '):
+                        content_line = content_line[2:]
+                    elif content_line.startswith('>'):
+                        content_line = content_line[1:]
+                    body_lines.append('    ' + content_line)
+                    i += 1
+                
+                # 添加转换后的提示框
+                result.append(f'!!! {admon_type}')
+                if body_lines:
+                    result.extend(body_lines)
+                else:
+                    # 如果没有内容，添加一个空行避免语法错误
+                    result.append('    ')
+                result.append('')  # 空行分隔
+            else:
+                # 不匹配的格式，保持原样
+                result.append(line)
+                i += 1
         else:
+            # 普通行，保持原样
             result.append(line)
             i += 1
-    
-    return '\n'.join(result)
 
+    return '\n'.join(result)
 
 def compile_markdown():
     os.makedirs(SRC_DIR, exist_ok=True)
     
     for filename in os.listdir(SRC_DIR):
-        if filename.endswith(".md"):
-            md_path = os.path.join(SRC_DIR, filename)
-            html_filename = filename.replace(".md", ".html")
-            html_path = html_filename
+        if not filename.endswith(".md"):
+            continue
+            
+        md_path = os.path.join(SRC_DIR, filename)
+        html_filename = filename.replace(".md", ".html")
+        html_path = html_filename
 
+        try:
             with open(md_path, "r", encoding="utf-8") as f:
                 md_content = f.read()
 
+            # 预处理 GitHub 风格提示框
             processed_md = preprocess_github_admonitions(md_content)
 
+            # 使用标准 Markdown 扩展 + pymdownx.admonition
             html_body = markdown.markdown(
                 processed_md,
                 extensions=[
-                    'markdown.extensions.tables',
-                    'markdown.extensions.fenced_code',
-                    'markdown.extensions.nl2br',
-                    'markdown.extensions.sane_lists',
-                    'pymdownx.admonition',      # ✅ 认 !!! tip 语法
+                    'markdown.extensions.tables',        # 表格支持
+                    'markdown.extensions.fenced_code',   # 代码块支持
+                    'markdown.extensions.nl2br',        # 换行转 <br>
+                    'markdown.extensions.sane_lists',    # 更好的列表支持
+                    'pymdownx.admonition',               # 提示框支持 (!!! tip)
                 ]
             )
 
+            # 完整 HTML 模板（包含主题切换功能）
             full_html = f"""<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
@@ -98,7 +122,9 @@ def compile_markdown():
             --admonition-bg: rgba(128, 128, 128, 0.08);
         }}
 
-        :root[data-theme="system"] {{}}
+        :root[data-theme="system"] {{
+            /* 跟随系统，不覆盖变量 */
+        }}
 
         @media (prefers-color-scheme: dark) {{
             :root[data-theme="system"] {{
@@ -127,7 +153,7 @@ def compile_markdown():
         }}
 
         pre, code {{
-            background: rgba(128,128,128,0.15);
+            background: rgba(128, 128, 128, 0.15);
             padding: 2px 6px;
             border-radius: 4px;
         }}
@@ -139,12 +165,6 @@ def compile_markdown():
             background: var(--admonition-bg);
         }}
 
-        blockquote p:first-child strong {{
-            display: block;
-            margin-bottom: 6px;
-        }}
-
-        /* ✅ pymdownx.admonition 生成的 class */
         .admonition {{
             border-left: 4px solid var(--border);
             padding: 10px 15px;
@@ -158,9 +178,17 @@ def compile_markdown():
             color: var(--text);
         }}
 
-        .admonition.tip {{ border-left-color: #238636; }}
-        .admonition.warning {{ border-left-color: #9e6a03; }}
-        .admonition.note {{ border-left-color: #0969da; }}
+        .admonition.tip {{
+            border-left-color: #238636;
+        }}
+
+        .admonition.warning {{
+            border-left-color: #9e6a03;
+        }}
+
+        .admonition.note {{
+            border-left-color: #0969da;
+        }}
 
         .theme-switcher {{
             position: fixed;
@@ -199,11 +227,14 @@ def compile_markdown():
             root.setAttribute('data-theme', theme);
             localStorage.setItem('theme', theme);
             switcher.value = theme;
+            
+            // 强制重绘，确保按钮样式更新
             switcher.style.display = 'none';
             switcher.offsetHeight;
             switcher.style.display = 'block';
         }}
 
+        // 初始化主题
         const saved = localStorage.getItem('theme');
         if (saved) {{
             applyTheme(saved);
@@ -211,11 +242,17 @@ def compile_markdown():
             applyTheme('system');
         }}
 
-        switcher.addEventListener('change', e => {{ applyTheme(e.target.value); }});
+        // 监听主题切换
+        switcher.addEventListener('change', e => {{
+            applyTheme(e.target.value);
+        }});
 
+        // 监听系统主题变化
         window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', e => {{
-            const current = localStorage.getItem('theme');
-            if (!current || current === 'system') applyTheme('system');
+            const currentTheme = localStorage.getItem('theme');
+            if (!currentTheme || currentTheme === 'system') {{
+                applyTheme('system');
+            }}
         }});
     </script>
 </body>
@@ -224,7 +261,11 @@ def compile_markdown():
 
             with open(html_path, "w", encoding="utf-8") as f:
                 f.write(full_html)
-            print(f"Compiled {md_path} -> {html_path}")
+            print(f"✅ Compiled {md_path} -> {html_path}")
+
+        except Exception as e:
+            print(f"❌ FAILED {md_path}: {e}")
+            raise
 
 if __name__ == "__main__":
     compile_markdown()
