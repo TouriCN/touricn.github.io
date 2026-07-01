@@ -12,7 +12,7 @@
 ## 关于此站点
 > 该站点由**Tourism**在中国时间2026年6月18号下午搭建。
 ---
-本站点为[旅游的小网站](http://ly.20110914.xyz)的重新更新版本，现在采用GitHub页面服务托管；使用了mdBook搭建。
+本站点为[旅游的小网站](http://ly.20110914.xyz)的重新更新版本，现在采用GitHub页面服务托管。
 <br><br>
 当然，如果你有兴趣贡献此站点的话，欢迎在[该站点的Github仓库](https://github.com/TouriCN/TouriCN.github.io)提交Pull Requests！
 <br><br>
@@ -31,6 +31,7 @@
 | 总字符数 | {{TOTAL_WORDS}} 字 |
 | 单篇均长 | {{AVG_CHARS}} 字 |
 | 最近更新 | {{LAST_MSG}} |
+
 ## RSS订阅
 > [!TIP]
 > 将该链接放在你的RSS阅读器里！
