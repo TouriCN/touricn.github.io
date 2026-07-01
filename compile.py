@@ -47,32 +47,33 @@ def preprocess_github_admonitions(md_content):
 
     return '\n'.join(result)
 
-def hide_iframes(md_content):
+def hide_iframes_and_objects(md_content):
     """
-    ✅ 把 iframe 藏进占位符
+    ✅ 核心防护：把 iframe 和 object 藏进占位符
     """
-    pattern = r'<iframe[^>]*>.*?</iframe>'
+    # 匹配 iframe 或 object 标签
+    pattern = r'<(iframe|object)[^>]*>.*?</\1>'
     matches = list(re.finditer(pattern, md_content, flags=re.DOTALL | re.IGNORECASE))
     
     placeholders = {}
     for i, match in enumerate(matches):
-        placeholder = f'<!--IFRAME_{i}-->'
+        placeholder = f'<!--EMBED_{i}-->'
         placeholders[placeholder] = match.group(0)
         md_content = md_content.replace(match.group(0), placeholder)
     
     return md_content, placeholders
 
-def restore_iframes(html_content, placeholders):
+def restore_iframes_and_objects(html_content, placeholders):
     """
-    ✅ 还原 iframe
+    ✅ 还原 iframe 和 object
     """
-    for placeholder, iframe in placeholders.items():
-        html_content = html_content.replace(placeholder, iframe)
+    for placeholder, tag in placeholders.items():
+        html_content = html_content.replace(placeholder, tag)
     return html_content
 
 def fix_internal_links(html_content, current_dir=""):
     """
-    ✅ 只处理 href="xxx.md"
+    ✅ 只处理 href="xxx.md"，绝不碰 src
     """
     pattern = r'href=["\']([^"\']+\.md)["\']'
     
@@ -103,8 +104,8 @@ def compile_markdown():
             # 1. 预处理警告框
             processed_md = preprocess_github_admonitions(md_content)
             
-            # 2. ✅ 隐藏 iframe
-            hidden_md, placeholders = hide_iframes(processed_md)
+            # 2. ✅ 隐藏 iframe/object（防止被 Markdown 或正则破坏）
+            hidden_md, placeholders = hide_iframes_and_objects(processed_md)
             
             # 3. Markdown 转 HTML
             html_body = markdown.markdown(
@@ -122,8 +123,8 @@ def compile_markdown():
             current_dir = '' if rel_path == '.' else rel_path.replace('\\', '/')
             html_body = fix_internal_links(html_body, current_dir)
             
-            # 5. ✅ 还原 iframe
-            html_body = restore_iframes(html_body, placeholders)
+            # 5. ✅ 还原 iframe/object
+            html_body = restore_iframes_and_objects(html_body, placeholders)
             
             # 6. 输出文件名
             if filename == "README.md":
@@ -143,6 +144,9 @@ def compile_markdown():
             base_title = filename.replace('.md', '')
             full_title = f"{base_title}-TouriCN"
             
+            # 9. ✅ 完整 HTML 模板（含防溢出 CSS）
+            raw_md_url = f"https://touricn.github.io/{md_path.replace(os.sep, '/')}"
+            
             full_html = f"""<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
@@ -156,16 +160,33 @@ def compile_markdown():
             --text: CanvasText;
             --border: CanvasText;
         }}
-        body {{
+        html, body {{
             margin: 0;
+            padding: 0;
+            max-width: 100%;
+            overflow-x: hidden;
+        }}
+        body {{
             font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
             line-height: 1.6;
             background: var(--bg);
             color: var(--text);
+            padding: 1em;
         }}
         table {{ border-collapse: collapse; margin: 1em 0; }}
         th, td {{ border: 1px solid var(--border); padding: 6px 10px; }}
         pre, code {{ background: rgba(128,128,128,0.15); padding: 2px 6px; border-radius: 4px; }}
+        
+        img, video, iframe, object {{
+            max-width: 100%;
+            height: auto;
+            display: block;
+        }}
+        
+        pre, code {{
+            white-space: pre-wrap;
+            word-break: break-all;
+        }}
 
         blockquote {{
             margin: 1em 0;
@@ -191,15 +212,15 @@ def compile_markdown():
             padding: 4px 8px; font-size: 14px; cursor: pointer; color: var(--text);
         }}
 
-        iframe {{
-            display: block;
-            width: 100%;
-            min-height: 400px;
-            max-width: 100%;
-            border: 1px solid var(--border);
-            background: var(--bg);
-            border-radius: 4px;
-            box-sizing: border-box;
+        footer {{
+            margin-top: 2em;
+            padding-top: 1em;
+            border-top: 1px solid var(--border);
+            font-size: 0.9em;
+            opacity: 0.7;
+        }}
+        footer a {{
+            color: inherit;
         }}
     </style>
 </head>
@@ -210,6 +231,9 @@ def compile_markdown():
         <option value="dark">黑色</option>
     </select>
     {html_body}
+    <footer>
+        <a href="{raw_md_url}" target="_blank">查看原始源码</a>
+    </footer>
     <script>
         const s = document.getElementById('themeSwitcher'), r = document.documentElement;
         function setTheme(t) {{ r.setAttribute('data-theme', t); localStorage.setItem('theme', t); s.value = t; }}
