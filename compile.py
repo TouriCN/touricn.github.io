@@ -47,30 +47,43 @@ def preprocess_github_admonitions(md_content):
 
     return '\n'.join(result)
 
+def hide_iframes(md_content):
+    """
+    ✅ 把 iframe 藏进占位符
+    """
+    pattern = r'<iframe[^>]*>.*?</iframe>'
+    matches = list(re.finditer(pattern, md_content, flags=re.DOTALL | re.IGNORECASE))
+    
+    placeholders = {}
+    for i, match in enumerate(matches):
+        placeholder = f'<!--IFRAME_{i}-->'
+        placeholders[placeholder] = match.group(0)
+        md_content = md_content.replace(match.group(0), placeholder)
+    
+    return md_content, placeholders
+
+def restore_iframes(html_content, placeholders):
+    """
+    ✅ 还原 iframe
+    """
+    for placeholder, iframe in placeholders.items():
+        html_content = html_content.replace(placeholder, iframe)
+    return html_content
+
 def fix_internal_links(html_content, current_dir=""):
     """
-    ✅ 只处理 href="xxx.md" 的内部链接
-    ✅ 绝不处理 src 属性，防止 iframe 被拆烂
+    ✅ 只处理 href="xxx.md"
     """
-    # 使用负向前瞻，确保前面不是 src=
-    pattern = r'(?<!\bsrc=[\'"])href=["\']([^"\']+\.md)["\']'
+    pattern = r'href=["\']([^"\']+\.md)["\']'
     
     def replace_link(match):
-        full_match = match.group(0)  # 例如 href="friends.md"
-        path = match.group(1)        # 例如 friends.md
-        
-        # 去掉开头的斜杠
+        full_match = match.group(0)
+        path = match.group(1)
         if path.startswith('/'):
             path = path[1:]
-        
-        # 替换后缀
         html_path = path.replace('.md', '.html')
-        
-        # 拼接相对路径
         if current_dir:
             html_path = os.path.join(current_dir, html_path).replace('\\', '/')
-        
-        # 返回修复后的完整属性
         return full_match.replace(path, html_path)
     
     return re.sub(pattern, replace_link, html_content)
@@ -90,9 +103,12 @@ def compile_markdown():
             # 1. 预处理警告框
             processed_md = preprocess_github_admonitions(md_content)
             
-            # 2. Markdown 转 HTML
+            # 2. ✅ 隐藏 iframe
+            hidden_md, placeholders = hide_iframes(processed_md)
+            
+            # 3. Markdown 转 HTML
             html_body = markdown.markdown(
-                processed_md,
+                hidden_md,
                 extensions=[
                     'markdown.extensions.tables',
                     'markdown.extensions.fenced_code',
@@ -101,23 +117,21 @@ def compile_markdown():
                 ]
             )
             
-            # 3. 计算当前文件相对于 src 的目录
+            # 4. 修复内部链接
             rel_path = os.path.relpath(root, SRC_DIR)
-            if rel_path == '.':
-                current_dir = ''
-            else:
-                current_dir = rel_path.replace('\\', '/')
-            
-            # 4. 修复内部链接（只处理 href，不碰 src）
+            current_dir = '' if rel_path == '.' else rel_path.replace('\\', '/')
             html_body = fix_internal_links(html_body, current_dir)
             
-            # 5. 确定输出文件名
+            # 5. ✅ 还原 iframe
+            html_body = restore_iframes(html_body, placeholders)
+            
+            # 6. 输出文件名
             if filename == "README.md":
                 html_filename = "index.html"
             else:
                 html_filename = filename.replace(".md", ".html")
             
-            # 6. 构建输出路径
+            # 7. 构建输出路径
             if current_dir:
                 output_dir = current_dir
                 os.makedirs(output_dir, exist_ok=True)
@@ -125,7 +139,7 @@ def compile_markdown():
             else:
                 html_path = html_filename
             
-            # 7. 标题处理
+            # 8. 标题
             base_title = filename.replace('.md', '')
             full_title = f"{base_title}-TouriCN"
             
@@ -177,7 +191,6 @@ def compile_markdown():
             padding: 4px 8px; font-size: 14px; cursor: pointer; color: var(--text);
         }}
 
-        /* ✅ iframe 样式 */
         iframe {{
             display: block;
             width: 100%;
@@ -187,12 +200,6 @@ def compile_markdown():
             background: var(--bg);
             border-radius: 4px;
             box-sizing: border-box;
-        }}
-        
-        /* 确保 iframe 容器正确 */
-        .iframe-container {{
-            margin: 1em 0;
-            overflow: hidden;
         }}
     </style>
 </head>
