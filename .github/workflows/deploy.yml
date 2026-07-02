@@ -68,7 +68,7 @@ jobs:
 
       - name: Inject metadata
         run: |
-          sed -i "s/{{BUILD_TIME}}/${{ env.BUILD_TIME }}/g" index.html
+          sed -i "s|{{BUILD_TIME}}|${{ env.BUILD_TIME }}|g" index.html
           sed -i "s/{{SHORT_HASH}}/${{ env.SHORT_HASH }}/g" index.html
           sed -i "s/{{ACTOR}}/${{ env.ACTOR }}/g" index.html
           sed -i "s/{{LAST_MSG}}/${{ env.LAST_MSG }}/g" index.html
