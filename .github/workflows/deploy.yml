@@ -46,7 +46,7 @@ jobs:
 
       - name: Collect build metadata
         run: |
-          START_DATE="2026-06-18"
+          START_DATE="2026-04-01"
           BUILD_TIME=$(TZ=Asia/Shanghai date +"%Y-%m-%d %H:%M:%S")
           SHORT_HASH=${GITHUB_SHA::7}
           ACTOR=${{ github.actor }}
