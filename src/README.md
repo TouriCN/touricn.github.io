@@ -23,9 +23,6 @@
 | 提交哈希 | {{SHORT_HASH}} |
 | 更新者 | {{ACTOR}} |
 | 运行天数 | {{RUN_DAYS}} 天 |
-| 总文件数 | {{TOTAL_FILES}} 篇 |
-| 总字符数 | {{TOTAL_WORDS}} 字 |
-| 单篇均长 | {{AVG_CHARS}} 字 |
 | 最近更新 | {{LAST_MSG}} |
 
 ## RSS订阅
