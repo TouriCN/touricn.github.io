@@ -51,9 +51,6 @@ jobs:
           SHORT_HASH=${GITHUB_SHA::7}
           ACTOR=${{ github.actor }}
           LAST_MSG=$(git log -1 --pretty=%s)
-          TOTAL_FILES=$(find . -maxdepth 1 -name "*.html" | wc -l)
-          TOTAL_WORDS=$(find . -maxdepth 1 -name "*.html" -exec cat {} \; | wc -c)
-          AVG_CHARS=$((TOTAL_WORDS / TOTAL_FILES))
           START_SEC=$(date -d "$START_DATE" +%s)
           NOW_SEC=$(date +%s)
           RUN_DAYS=$(( (NOW_SEC - START_SEC) / 86400 ))
@@ -61,9 +58,6 @@ jobs:
           echo "SHORT_HASH=$SHORT_HASH" >> $GITHUB_ENV
           echo "ACTOR=$ACTOR" >> $GITHUB_ENV
           echo "LAST_MSG=$LAST_MSG" >> $GITHUB_ENV
-          echo "TOTAL_FILES=$TOTAL_FILES" >> $GITHUB_ENV
-          echo "TOTAL_WORDS=$TOTAL_WORDS" >> $GITHUB_ENV
-          echo "AVG_CHARS=$AVG_CHARS" >> $GITHUB_ENV
           echo "RUN_DAYS=$RUN_DAYS" >> $GITHUB_ENV
 
       - name: Inject metadata
@@ -72,9 +66,6 @@ jobs:
           sed -i "s/{{SHORT_HASH}}/${{ env.SHORT_HASH }}/g" index.html
           sed -i "s/{{ACTOR}}/${{ env.ACTOR }}/g" index.html
           sed -i "s/{{LAST_MSG}}/${{ env.LAST_MSG }}/g" index.html
-          sed -i "s/{{TOTAL_FILES}}/${{ env.TOTAL_FILES }}/g" index.html
-          sed -i "s/{{TOTAL_WORDS}}/${{ env.TOTAL_WORDS }}/g" index.html
-          sed -i "s/{{AVG_CHARS}}/${{ env.AVG_CHARS }}/g" index.html
           sed -i "s/{{RUN_DAYS}}/${{ env.RUN_DAYS }}/g" index.html
 
       - name: Upload artifact
