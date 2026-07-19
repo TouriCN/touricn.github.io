@@ -10,7 +10,8 @@ export default defineConfig({
     nav: [
       { text: '主页', link: '/' },
     ],
-    sidebar: [,
+    sidebar: [
+      { text: '主页', link: '/' }
       ],
     },
     socialLinks: [
