@@ -1,6 +1,6 @@
 # 文章
 TouriCN的些许文章。
-# Ti快告
+## Ti快告
 EaseCation家园"Ti Homeland"的新闻。<br>
 [2026-3-7 共第一期](tihl/2026-3-7.md)<br>
 [2026-3-11 共第二期](tihl/2026-3-11.md)<br>
