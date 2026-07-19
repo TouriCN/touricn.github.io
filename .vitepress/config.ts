@@ -9,7 +9,7 @@ export default defineConfig({
     nav: [{ text: '主页', link: '/' }],
     sidebar: [{ text: '主页', link: '/' }],
     socialLinks: [
-      { icon: 'github', link: 'https://github.com/TouriCN/touricn.github.      {
+      { icon: 'github', link: 'https://github.com/TouriCN/touricn.github.io'
       { icon: {
           svg: '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"><rect x="4" y="6" width="16" height="12" rx="2" fill="none" stroke="#00AEEC" stroke-width="2"/><line x1="8" y1="14" x2="11" y2="11" stroke="#00AEEC" stroke-width="2" stroke-linecap="round"/><line x1="16" y1="14" x2="13" y2="11" stroke="#00AEEC" stroke-width="2" stroke-linecap="round"/><line x1="9" y1="3.5" x2="10" y2="6" stroke="#00AEEC" stroke-width="2.5" stroke-linecap="round"/><line x1="15" y1="3.5" x2="14" y2="6" stroke="#00AEEC" stroke-width="2.5" stroke-linecap="round"/></svg>'
         },
