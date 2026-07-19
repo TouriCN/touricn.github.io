@@ -6,7 +6,7 @@
 <!-- SITE_INFO_START -->
 
 <!-- SITE_INFO_END -->
-# 留言板
+## 留言板
 <div class="giscus-container"></div>
 
 <script setup>
