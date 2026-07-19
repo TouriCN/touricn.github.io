@@ -23,7 +23,7 @@ jobs:
           node-version: 20
 
       # 核心：统计所有站点信息并导出为环境变量
-            - name: Collect site info
+      - name: Collect site info
         run: |
           HASH=$(git rev-parse --short HEAD)
           AUTHOR=${{ github.actor }}
