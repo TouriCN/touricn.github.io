@@ -5,6 +5,7 @@ export default defineConfig({
   description: '神秘的站点。',
   lang: 'zh-CN',
   base: '/',
+  srcDir: '.',
   outDir: '.vitepress/dist',
 
   // 核心：把Workflow统计的环境变量注入为全局常量，供主页调用
