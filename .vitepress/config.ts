@@ -3,6 +3,7 @@ import { defineConfig } from 'vitepress'
 export default defineConfig({
   title: 'TouriCN',
   description: '神秘的站点。',
+  lang: 'zh-CN',
   base: '/',
   outDir: '.vitepress/dist',
   themeConfig: {
