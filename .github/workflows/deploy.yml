@@ -3,30 +3,60 @@ name: Deploy VitePress
 on:
   push:
     branches: [main]
+  workflow_dispatch:
 
 permissions:
   contents: read
   pages: write
   id-token: write
 
-concurrency:
-  group: pages
-  cancel-in-progress: true
-
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # 必须保留！否则拿不到git提交历史
+
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-      - name: Install dependencies
-        run: npm install --force
-      - name: Build VitePress site
-        run: npm run docs:build
-      - name: Upload artifact
-        uses: actions/upload-pages-artifact@v3
+
+      # 核心：统计所有站点信息并导出为环境变量
+      - name: Collect site info
+        run: |
+          HASH=$(git rev-parse --short HEAD)
+          AUTHOR=${{ github.actor }}
+          MSG=$(git log -1 --format=%s | cut -c1-50)  # 截断过长提交信息
+          BUILD_TIME=$(TZ=Asia/Shanghai date '+%Y/%m/%d %H:%M:%S')
+          FILES=$(find docs -name "*.md" | wc -l)
+          TOTAL_WORDS=$(node -e '
+            const fs = require("fs");
+            const files = process.argv.slice(1);
+            let total = 0;
+            files.forEach(f => {
+              const content = fs.readFileSync(f, "utf-8").replace(/^---[\s\S]+?---\n+/, "");
+              const cn = (content.match(/[\u4e00-\u9fa5]/g) || []).length;
+              const en = (content.match(/[a-zA-Z]+/g) || []).length;
+              total += cn + en;
+            });
+            console.log(total);
+          ' $(find docs -name "*.md"))
+          AVG_WORDS=$((FILES > 0 ? TOTAL_WORDS / FILES : 0))
+
+          # 导出环境变量（和config.ts里的变量名一一对应）
+          echo "SITE_HASH=$HASH" >> $GITHUB_ENV
+          echo "SITE_AUTHOR=$AUTHOR" >> $GITHUB_ENV
+          echo "SITE_MSG=$MSG" >> $GITHUB_ENV
+          echo "SITE_BUILD_TIME=$BUILD_TIME" >> $GITHUB_ENV
+          echo "SITE_FILES=$FILES" >> $GITHUB_ENV
+          echo "SITE_TOTAL_WORDS=$TOTAL_WORDS" >> $GITHUB_ENV
+          echo "SITE_AVG_WORDS=$AVG_WORDS" >> $GITHUB_ENV
+
+      - run: npm install
+      - run: npm run docs:build
+
+      - uses: actions/upload-pages-artifact@v3
         with:
           path: .vitepress/dist
 
@@ -35,8 +65,6 @@ jobs:
     runs-on: ubuntu-latest
     environment:
       name: github-pages
-      url: ${{ steps.deploy.outputs.page_url }}
+      url: ${{ steps.deployment.outputs.page_url }}
     steps:
-      - name: Deploy to GitHub Pages
-        id: deploy
-        uses: actions/deploy-pages@v4
+      - uses: actions/deploy-pages@v4
