@@ -3,6 +3,9 @@
 <br><br>
 该站点会发布一些好东西。<br>
 试图打开右上角的三条杠来查看这里的一切。
+<!-- SITE_INFO_START -->
+
+<!-- SITE_INFO_END -->
 # 留言板
 <div class="giscus-container"></div>
 
