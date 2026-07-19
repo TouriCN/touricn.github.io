@@ -37,8 +37,13 @@ export default defineConfig({
   },
 
   themeConfig: {
-    nav: [{ text: '主页', link: '/' }],
-    sidebar: [{ text: '主页', link: '/' }],
+    nav: [
+      { text: '主页', link: '/' }
+      { text: '文章', link: 'posts' }
+    ],
+    sidebar: [
+      { text: '你难道以为这里有什么吗？(o゜▽゜)o☆', link: '/' }
+    ],
     socialLinks: [
       { icon: 'github', link: 'https://github.com/TouriCN/touricn.github.io' },
       {
