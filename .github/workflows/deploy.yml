@@ -5,11 +5,10 @@ on:
     branches: [ main ]
   workflow_dispatch:
 
-# 必须的三个权限，缺一不可
 permissions:
-  contents: write      # 允许修改index.md注入表格
-  pages: write         # 允许部署到Pages
-  id-token: write      # OIDC认证必须，Pages部署核心字段
+  contents: write
+  pages: write
+  id-token: write
 
 jobs:
   build:
@@ -18,14 +17,14 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0  # 必须，否则拿不到git提交历史
+          fetch-depth: 0
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: 20
 
-      # 注入站点信息（纯Markdown，无复杂逻辑）
+      # 核心：用echo单行追加，彻底避免heredoc的缩进坑
       - name: Inject site info markdown
         run: |
           HASH=$(git rev-parse --short HEAD)
@@ -33,19 +32,18 @@ jobs:
           MSG=$(git log -1 --format=%s)
           BUILD_TIME=$(TZ=Asia/Shanghai date '+%Y/%m/%d %H:%M:%S')
           FILES=$(find . -name "*.md" ! -path "./node_modules/*" ! -path "./.git/*" | wc -l)
-          
           # 清除旧表格，避免重复
           sed -i '/<!-- SITE_INFO_START -->/,/<!-- SITE_INFO_END -->/d' index.md
-          
-          # 追加纯Markdown表格（和你手写的一模一样）
-          cat << 'EOF' >> index.md
-<!-- SITE_INFO_START -->
-## 站点信息
-| 构建时间 | 提交者 | 提交信息 | 提交哈希 | 文件数 |
-| :--- | :--- | :--- | :--- | :--- |
-| ${BUILD_TIME} | ${AUTHOR} | ${MSG} | ${HASH} | ${FILES} |
-<!-- SITE_INFO_END -->
-EOF
+          # 逐行追加Markdown内容，无格式风险
+          echo "" >> index.md
+          echo "<!-- SITE_INFO_START -->" >> index.md
+          echo "## 站点信息" >> index.md
+          echo "" >> index.md
+          echo "| 构建时间 | 提交者 | 提交信息 | 提交哈希 | 文件数 |" >> index.md
+          echo "| :--- | :--- | :--- | :--- | :--- |" >> index.md
+          echo "| ${BUILD_TIME} | ${AUTHOR} | ${MSG} | ${HASH} | ${FILES} |" >> index.md
+          echo "" >> index.md
+          echo "<!-- SITE_INFO_END -->" >> index.md
 
       - name: Install dependencies
         run: npm install
@@ -56,12 +54,11 @@ EOF
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: .vitepress/dist  # 必须和config.ts里的outDir完全一致
+          path: .vitepress/dist
 
   deploy:
     needs: build
     runs-on: ubuntu-latest
-    # 必须的环境配置，Pages部署核心字段，编辑器飘红就是缺这个
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
