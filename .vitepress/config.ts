@@ -43,7 +43,7 @@ export default defineConfig({
       { icon: 'github', link: 'https://github.com/TouriCN/touricn.github.io' },
       {
         icon: {
-          svg: '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"><rect x="4" y="6" width="16" height="12" rx="2" fill="none" stroke="#00AEEC" stroke-width="1.8"/><line x1="9" y1="3.5" x2="10" y2="6" stroke="#00AEEC" stroke-width="2" stroke-linecap="round"/><line x1="15" y1="3.5" x2="14" y2="6" stroke="#00AEEC" stroke-width="2" stroke-linecap="round"/><line x1="7.5" y1="13" x2="10" y2="11" stroke="#00AEEC" stroke-width="1.5" stroke-linecap="round"/><line x1="16.5" y1="13" x2="14" y2="11" stroke="#00AEEC" stroke-width="1.5" stroke-linecap="round"/></svg>'
+          svg: '<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24"><rect x="4" y="6" width="16" height="12" rx="2" fill="none" stroke="#FB7299" stroke-width="1.8"/><line x1="8.5" y1="3" x2="9.5" y2="6" stroke="#FB7299" stroke-width="2" stroke-linecap="round"/><line x1="15.5" y1="3" x2="14.5" y2="6" stroke="#FB7299" stroke-width="2" stroke-linecap="round"/><line x1="7.5" y1="11.5" x2="10" y2="10.5" stroke="#FB7299" stroke-width="1.5" stroke-linecap="round"/><line x1="14" y1="10.5" x2="16.5" y2="11.5" stroke="#FB7299" stroke-width="1.5" stroke-linecap="round"/><path d="M10 14.2 L11 15 L12 14.2 L13 15 L14 14.2" stroke="#FB7299" stroke-width="1" stroke-linecap="round" stroke-linejoin="round" fill="none"/></svg>'
         },
         link: 'https://space.bilibili.com/3546574053443664',
         ariaLabel: 'Bilibili Space',
