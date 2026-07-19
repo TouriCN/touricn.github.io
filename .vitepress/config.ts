@@ -38,7 +38,7 @@ export default defineConfig({
 
   themeConfig: {
     nav: [
-      { text: '主页', link: '/' }
+      { text: '主页', link: '/' },
       { text: '文章', link: 'posts' }
     ],
     sidebar: [
