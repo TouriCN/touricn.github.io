@@ -23,13 +23,14 @@ jobs:
           node-version: 20
 
       # 核心：统计所有站点信息并导出为环境变量
-      - name: Collect site info
+            - name: Collect site info
         run: |
           HASH=$(git rev-parse --short HEAD)
           AUTHOR=${{ github.actor }}
-          MSG=$(git log -1 --format=%s | cut -c1-50)  # 截断过长提交信息
+          MSG=$(git log -1 --format=%s | cut -c1-50)
           BUILD_TIME=$(TZ=Asia/Shanghai date '+%Y/%m/%d %H:%M:%S')
-          FILES=$(find docs -name "*.md" | wc -l)
+          # 找当前目录下的md文件，排除node_modules和git目录（避免扫无关文件）
+          FILES=$(find . -name "*.md" ! -path "./node_modules/*" ! -path "./.git/*" | wc -l)
           TOTAL_WORDS=$(node -e '
             const fs = require("fs");
             const files = process.argv.slice(1);
@@ -41,10 +42,9 @@ jobs:
               total += cn + en;
             });
             console.log(total);
-          ' $(find docs -name "*.md"))
+          ' $(find . -name "*.md" ! -path "./node_modules/*" ! -path "./.git/*"))
           AVG_WORDS=$((FILES > 0 ? TOTAL_WORDS / FILES : 0))
-
-          # 导出环境变量（和config.ts里的变量名一一对应）
+          # 导出环境变量
           echo "SITE_HASH=$HASH" >> $GITHUB_ENV
           echo "SITE_AUTHOR=$AUTHOR" >> $GITHUB_ENV
           echo "SITE_MSG=$MSG" >> $GITHUB_ENV
