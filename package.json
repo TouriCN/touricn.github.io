@@ -1,0 +1,7 @@
+{
+  "name": "touricn.github.io",
+  "private": false,
+  "devDependencies": {
+    "vitepress": "^1.6.4"
+  }
+}
