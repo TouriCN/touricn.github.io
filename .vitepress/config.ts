@@ -18,7 +18,9 @@ export default defineConfig({
         ariaLabel: 'Bilibili Space'
       },
       {
-        icon: 'mail',
+        icon: {
+          svg: 'data:image/svg+xml;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIyNCIgaGVpZ2h0PSIyNCIgdmlld0JveD0iMCAwIDI0IDI0IiBmaWxsPSJub25lIiBzdHJva2U9IndoaXRlIiBzdHJva2Utd2lkdGg9IjIuMiIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIiBzdHJva2UtbGluZWpvaW49InJvdW5kIj48cmVjdCB4PSIyIiB5PSI0IiB3aWR0aD0iMjAiIGhlaWdodD0iMTYiIHJ4PSIyIi8+PHBvbHlsaW5lIHBvaW50cz0iMjIsNCAxMiwxMyAyLDQiLz48L3N2Zz4='
+        },
         link: 'mailto:linyaovo20141128@qq.com',
         ariaLabel: 'Email'
       },
