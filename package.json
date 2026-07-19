@@ -1,6 +1,10 @@
 {
   "name": "touricn.github.io",
-  "private": false,
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "docs:build": "vitepress build"
+  },
   "devDependencies": {
     "vitepress": "^1.6.4"
   }
