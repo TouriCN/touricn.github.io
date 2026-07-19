@@ -7,6 +7,19 @@ export default defineConfig({
   base: '/',
   outDir: '.vitepress/dist',
 
+  // 核心：把Workflow统计的环境变量注入为全局常量，供主页调用
+  define: {
+    __SITE_INFO__: {
+      hash: process.env.SITE_HASH || 'N/A',
+      author: process.env.SITE_AUTHOR || 'N/A',
+      msg: process.env.SITE_MSG || 'N/A',
+      buildTime: process.env.SITE_BUILD_TIME || 'N/A',
+      files: Number(process.env.SITE_FILES) || 0,
+      totalWords: Number(process.env.SITE_TOTAL_WORDS) || 0,
+      avgWords: Number(process.env.SITE_AVG_WORDS) || 0,
+    },
+  },
+
   search: {
     provider: 'local',
     options: {
@@ -16,11 +29,7 @@ export default defineConfig({
           displayDetails: '显示详情',
           resetButtonTitle: '重置搜索',
           noResultsText: '没有找到相关结果。',
-          footer: {
-            selectText: '选择',
-            navigateText: '切换',
-            closeText: '关闭',
-          },
+          footer: { selectText: '选择', navigateText: '切换', closeText: '关闭' },
         },
       },
     },
