@@ -24,7 +24,7 @@ jobs:
         with:
           node-version: 20
 
-      # 核心：用echo单行追加，彻底避免heredoc的缩进坑
+      # 统计信息 + 注入Markdown表格（单行echo，无格式风险）
       - name: Inject site info markdown
         run: |
           HASH=$(git rev-parse --short HEAD)
@@ -32,16 +32,19 @@ jobs:
           MSG=$(git log -1 --format=%s)
           BUILD_TIME=$(TZ=Asia/Shanghai date '+%Y/%m/%d %H:%M:%S')
           FILES=$(find . -name "*.md" ! -path "./node_modules/*" ! -path "./.git/*" | wc -l)
-          # 清除旧表格，避免重复
+          # 字数统计：排除frontmatter，只算正文
+          TOTAL_WORDS=$(node -e "const fs=require('fs');const f=process.argv;let t=0;f.slice(1).forEach(x=>{const c=fs.readFileSync(x,'utf-8').replace(/^---[\s\S]+?---\n+/,'');t+=(c.match(/[\u4e00-\u9fa5]/g)||[]).length+(c.match(/[a-zA-Z]+/g)||[]).length});console.log(t)" $(find . -name "*.md" ! -path "./node_modules/*" ! -path "./.git/*"))
+          AVG_WORDS=$((FILES > 0 ? TOTAL_WORDS / FILES : 0))
+          # 清除旧表格
           sed -i '/<!-- SITE_INFO_START -->/,/<!-- SITE_INFO_END -->/d' index.md
-          # 逐行追加Markdown内容，无格式风险
+          # 逐行追加Markdown表格（7列，含字数统计）
           echo "" >> index.md
           echo "<!-- SITE_INFO_START -->" >> index.md
           echo "## 站点信息" >> index.md
           echo "" >> index.md
-          echo "| 构建时间 | 提交者 | 提交信息 | 提交哈希 | 文件数 |" >> index.md
-          echo "| :--- | :--- | :--- | :--- | :--- |" >> index.md
-          echo "| ${BUILD_TIME} | ${AUTHOR} | ${MSG} | ${HASH} | ${FILES} |" >> index.md
+          echo "| 构建时间 | 提交者 | 提交信息 | 提交哈希 | 文件数 | 总字数 | 每文件平均字数 |" >> index.md
+          echo "| :--- | :--- | :--- | :--- | :--- | :--- | :--- |" >> index.md
+          echo "| ${BUILD_TIME} | ${AUTHOR} | ${MSG} | ${HASH} | ${FILES} | ${TOTAL_WORDS} | ${AVG_WORDS} |" >> index.md
           echo "" >> index.md
           echo "<!-- SITE_INFO_END -->" >> index.md
 
