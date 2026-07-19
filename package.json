@@ -6,6 +6,7 @@
     "docs:build": "vitepress build"
   },
   "devDependencies": {
-    "vitepress": "^1.6.4"
+    "vitepress": "^1.6.4",
+    "@iconify-json/simple-icons": "^1"
   }
 }
