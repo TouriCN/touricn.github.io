@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write  # 必须有写权限，才能修改index.md
   pages: write
   id-token: write
 
@@ -16,21 +16,26 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          fetch-depth: 0  # 必须保留！否则拿不到git提交历史
+          fetch-depth: 0  # 必须，否则拿不到git历史
 
       - uses: actions/setup-node@v4
         with:
           node-version: 20
 
-      # 核心：统计所有站点信息并导出为环境变量
-      - name: Collect site info
+      # 核心：统计信息 → 直接生成原生Markdown表格 → 写入index.md
+      - name: Generate site info markdown
         run: |
+          # 1. 统计基础信息
           HASH=$(git rev-parse --short HEAD)
           AUTHOR=${{ github.actor }}
           MSG=$(git log -1 --format=%s | cut -c1-50)
           BUILD_TIME=$(TZ=Asia/Shanghai date '+%Y/%m/%d %H:%M:%S')
-          # 找当前目录下的md文件，排除node_modules和git目录（避免扫无关文件）
+          
+          # 2. 统计md文件（排除node_modules和.git，避免扫无关文件）
           FILES=$(find . -name "*.md" ! -path "./node_modules/*" ! -path "./.git/*" | wc -l)
+          FILES=${FILES:-0}  # 防空值
+          
+          # 3. 统计字数（排除frontmatter，只算正文）
           TOTAL_WORDS=$(node -e '
             const fs = require("fs");
             const files = process.argv.slice(1);
@@ -43,15 +48,24 @@ jobs:
             });
             console.log(total);
           ' $(find . -name "*.md" ! -path "./node_modules/*" ! -path "./.git/*"))
+          TOTAL_WORDS=${TOTAL_WORDS:-0}
+          
           AVG_WORDS=$((FILES > 0 ? TOTAL_WORDS / FILES : 0))
-          # 导出环境变量
-          echo "SITE_HASH=$HASH" >> $GITHUB_ENV
-          echo "SITE_AUTHOR=$AUTHOR" >> $GITHUB_ENV
-          echo "SITE_MSG=$MSG" >> $GITHUB_ENV
-          echo "SITE_BUILD_TIME=$BUILD_TIME" >> $GITHUB_ENV
-          echo "SITE_FILES=$FILES" >> $GITHUB_ENV
-          echo "SITE_TOTAL_WORDS=$TOTAL_WORDS" >> $GITHUB_ENV
-          echo "SITE_AVG_WORDS=$AVG_WORDS" >> $GITHUB_ENV
+
+          # 4. 先删除旧的站点信息（只删标记内的内容，不污染源文件其他部分）
+          sed -i '/<!-- SITE_INFO_START -->/,/<!-- SITE_INFO_END -->/d' index.md
+          
+          # 5. 追加新的原生Markdown表格（完全静态，和手写的一模一样）
+          cat << EOF >> index.md
+
+<!-- SITE_INFO_START -->
+# 站点信息
+
+| 构建时间 | 提交者 | 提交信息 | 提交哈希 | 文件数 | 总字数 | 每文件平均字数 |
+| :--- | :--- | :--- | :--- | :--- | :--- | :--- |
+| ${BUILD_TIME} | ${AUTHOR} | ${MSG} | ${HASH} | ${FILES} | ${TOTAL_WORDS} | ${AVG_WORDS} |
+<!-- SITE_INFO_END -->
+EOF
 
       - run: npm install
       - run: npm run docs:build
