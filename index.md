@@ -2,7 +2,7 @@
 欢迎来到TouriCN！
 <br><br>
 该站点会发布一些好东西。<br>
-试图打开上面的"menu"和右上角的三条杠来查看这里的一切。
+试图打开右上角的三条杠来查看这里的一切。
 # 留言板
 <div class="giscus-container"></div>
 
