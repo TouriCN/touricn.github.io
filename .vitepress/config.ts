@@ -36,12 +36,6 @@ export default defineConfig({
     },
   },
 
-  editLink: {
-      pattern:
-        "https://github.com/TouriCN/touricn.github.io/edit/main/:path",
-      text: "在 GitHub 上编辑此页",
-    },
-
   themeConfig: {
     nav: [
       { text: '主页', link: '/' },
@@ -67,5 +61,10 @@ export default defineConfig({
         ariaLabel: 'Email',
       },
     ],
+  editLink: {
+      pattern:
+        "https://github.com/TouriCN/touricn.github.io/edit/main/:path",
+      text: "在 GitHub 上编辑此页",
+    },
   },
 })
