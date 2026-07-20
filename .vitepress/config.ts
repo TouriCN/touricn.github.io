@@ -34,6 +34,7 @@ export default defineConfig({
           'node_modules/',
           '*.html'
         ],
+        orderBy: 'date',
         collapsed: true
       })
     ]
