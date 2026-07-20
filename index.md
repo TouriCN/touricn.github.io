@@ -8,7 +8,7 @@ hero:
   text: "一个神秘的站点。"
   tagline: 该站点会发布一些好玩的东西。
   image:
-    src: text: "🧐"
+    src: "🧐"
     alt: emoji
 
 features:
