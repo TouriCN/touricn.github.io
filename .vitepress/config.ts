@@ -42,9 +42,7 @@ export default defineConfig({
       { text: '主页', link: '/' },
       { text: '文章', link: 'posts' }
     ],
-    sidebar: [
-      { text: '你难道以为这里有什么吗？(o゜▽゜)o☆', link: '/' }
-    ],
+    
     socialLinks: [
       { icon: 'github', link: 'https://github.com/TouriCN/touricn.github.io' },
       {
