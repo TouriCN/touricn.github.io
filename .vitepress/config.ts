@@ -8,33 +8,42 @@ export default defineConfig({
   base: '/',
   srcDir: '.',
   outDir: '.vitepress/dist',
+  i18n: {
+    locales: {
+      'zh-CN': {
+        label: '简体中文',
+        title: 'TouriCN',
+        description: '神秘的站点。',
+        search: {
+          button: { buttonText: '搜索', placeholder: '搜索文档...' },
+          modal: {
+            displayDetails: '显示详情',
+            resetButtonTitle: '重置搜索',
+            noResultsText: '没有找到相关结果。',
+            footer: { selectText: '选择', navigateText: '切换', closeText: '关闭' }
+          }
+        }
+      }
+    }
+  },
   search: {
     provider: 'local',
     options: {
-      translations: {
-        button: { buttonText: '搜索', placeholder: '搜索文档...' },
-        modal: {
-          displayDetails: '显示详情',
-          resetButtonTitle: '重置搜索',
-          noResultsText: '没有找到相关结果。',
-          footer: { selectText: '选择', navigateText: '切换', closeText: '关闭' }
-        }
-      }
+      placeholder: '搜索文档...'
     }
   },
   vite: {
     plugins: [
       AutoSidebar({
         titleFromFile: true,
-        path: '.',
+        path: 'posts',
         ignoreList: [
           'README.md',
           '.vitepress/',
           '.github/',
           'node_modules/',
-          '*.html'
+          '**/*.draft.md'
         ],
-        orderBy: 'date',
         collapsed: true
       })
     ]
