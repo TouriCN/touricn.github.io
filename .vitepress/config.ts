@@ -42,7 +42,7 @@ export default defineConfig({
           '.vitepress/',
           '.github/',
           'node_modules/',
-          '**/*.draft.md'
+          '*.html'
         ],
         collapsed: true
       })
