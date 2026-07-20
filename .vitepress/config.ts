@@ -38,7 +38,7 @@ export default defineConfig({
 
   editLink: {
       pattern:
-        "https://github.com/ToutiCN/touricn.github.io/edit/main/:path",
+        "https://github.com/TouriCN/touricn.github.io/edit/main/:path",
       text: "在 GitHub 上编辑此页",
     },
 
