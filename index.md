@@ -7,9 +7,6 @@ hero:
   name: "TouriCN"
   text: "一个神秘的站点。"
   tagline: 该站点会发布一些好玩的东西。
-  image:
-    src: "🧐"
-    alt: emoji
 
 features:
   - title: 这里目前还没有什么东西。
