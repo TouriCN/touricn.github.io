@@ -66,5 +66,22 @@ export default defineConfig({
         "https://github.com/TouriCN/touricn.github.io/edit/main/:path",
       text: "在 GitHub 上编辑此页",
     },
+  vite: {
+    plugins: [
+      AutoSidebar({
+        titleFromFile: true,
+        path: "./",
+        ignoreList: [
+          "README.md",
+          "*.html",
+          ".vitepress",
+          "package.json",
+          ".gitignore",
+          ".github",
+        ],
+      }),
+    ],
+  },
+  lastUpdated: true,
   },
 })
