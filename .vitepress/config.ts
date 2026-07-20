@@ -36,6 +36,12 @@ export default defineConfig({
     },
   },
 
+  editLink: {
+      pattern:
+        "https://github.com/ToutiCN/touricn.github.io/edit/main/:path",
+      text: "在 GitHub 上编辑此页",
+    },
+
   themeConfig: {
     nav: [
       { text: '主页', link: '/' },
