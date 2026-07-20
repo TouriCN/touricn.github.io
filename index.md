@@ -1,8 +1,21 @@
-# TouriCN
-欢迎来到TouriCN！
-<br><br>
-该站点会发布一些好东西。<br>
-试图打开右上角的三条杠来查看这里的一切。
+---
+# https://vitepress.dev/reference/default-theme-home-page
+layout: home
+titleTemplate: TouriCN
+
+hero:
+  name: "TouriCN"
+  text: "一个神秘的站点。"
+  tagline: 该站点会发布一些好玩的东西。
+  image:
+    src: ✧*｡٩(ˊωˋ*)و✧*｡
+    alt: emoji
+
+features:
+  - title: 这里目前还没有什么东西。
+    details: 以后将会添加一些feature，如果有feature添加的话。。。
+    icon: 😇
+---
 <!-- SITE_INFO_START -->
 
 <!-- SITE_INFO_END -->
