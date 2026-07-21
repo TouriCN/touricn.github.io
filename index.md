@@ -9,6 +9,11 @@ hero:
   tagline: 该站点会发布一些好玩的东西。
 
 features:
+  - title: 2FA验证码工具
+    details: 网页即刻输出验证码密钥，方便快捷使用。
+    link: tools/2FAauthenticator.md
+    linktext: 点击使用
+    icon: 
   - title: 这里目前还没有什么东西。
     details: 以后将会添加一些feature，如果有feature添加的话。。。
     icon: 😇
