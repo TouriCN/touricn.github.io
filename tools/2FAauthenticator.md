@@ -6,7 +6,7 @@
   <div class="vp2fa-form">
     <div class="vp2fa-input-grid">
       <input id="vp2faLabel" class="vp2fa-input" placeholder="账号名（如：GitHub）">
-      <input id="vp2faSecret" class="vp2fa-input" placeholder="密钥（支持Base32/Hex/数字格式，自动识别）">
+      <input id="vp2faSecret" class="vp2fa-input" placeholder="密钥 / otpauth://链接 / 扫码导入">
     </div>
     <div class="vp2fa-add-row">
       <button id="vp2faAddBtn" class="vp2fa-add-btn">+ 添加账号</button>
@@ -20,26 +20,25 @@
   </div>
 </div>
 
-<!-- 二维码扫描弹窗（默认隐藏） -->
+<!-- 二维码扫描弹窗 -->
 <div id="vp2faScanModal" class="vp2fa-scan-modal" style="display:none;">
   <div class="vp2fa-scan-modal-content">
     <div class="vp2fa-scan-header">
       <span>扫描2FA二维码</span>
       <button id="vp2faScanClose" class="vp2fa-scan-close">✕</button>
     </div>
-    <!-- 隐藏的文件选择器，用于读取图库图片 -->
     <input type="file" id="vp2faImageInput" accept="image/*" style="display:none;">
     <div id="vp2faScanRegion" class="vp2fa-scan-region">
       <div class="vp2fa-scan-placeholder">
         <div class="vp2fa-scan-icon">📷</div>
         <p>正在启动摄像头...</p>
-        <p class="vp2fa-scan-hint">请将二维码对准摄像头中央，或点击下方「选择图片」从相册导入</p>
+        <p class="vp2fa-scan-hint">请将二维码对准摄像头，或点「选择图片」从相册导入</p>
       </div>
     </div>
+    <div id="vp2faFileScanRegion" style="display:none;"></div>
     <div id="vp2faScanResult" class="vp2fa-scan-result" style="display:none;"></div>
     <div class="vp2fa-scan-footer">
       <button id="vp2faScanStop" class="vp2fa-tool-btn danger">停止扫描</button>
-      <!-- 新增：选择图片按钮 -->
       <button id="vp2faPickImage" class="vp2fa-tool-btn">🖼️ 选择图片</button>
       <button id="vp2faScanConfirm" class="vp2fa-tool-btn" style="display:none;">确认添加</button>
     </div>
@@ -47,7 +46,8 @@
 </div>
 
 ## 该工具有什么用处？
-仅使用网页端，方便快捷使用；支持Base32/Hex/纯数字等多种密钥格式，自动识别无需转换；支持摄像头实时扫描、从相册读取二维码两种方式添加账号。<br>
+仅使用网页端，方便快捷使用；支持Base32/Hex/纯数字等多种密钥格式，自动识别无需转换。<br>
+支持摄像头实时扫描、从相册读取二维码、直接粘贴各类密码管理工具导出的otpauth://标准链接三种方式添加账号，粘贴链接时会自动识别为「平台 - 账户名」。<br>
 临时测试时随便输入字母即可生成模拟验证码，刷新页面后因不符合密钥规范自动失效，非常适合体验功能。
 
 ## 注意
@@ -92,55 +92,22 @@
 .vp2fa-tool-btn:hover { border-color: #58a6ff; color: #58a6ff; }
 .vp2fa-tool-btn.danger:hover { border-color: #f85149; color: #f85149; }
 
-.vp2fa-empty {
-  color: #8b949e; font-size: 14px; padding: 32px 0;
-  text-align: center; border-radius: 12px; background: #f6f8fa;
-  border: 1px dashed #d0d7de;
-}
+.vp2fa-empty { color: #8b949e; font-size: 14px; padding: 32px 0; text-align: center; border-radius: 12px; background: #f6f8fa; border: 1px dashed #d0d7de; }
 
-/* ===== 扫描弹窗样式 ===== */
-.vp2fa-scan-modal {
-  position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-  background: rgba(0,0,0,0.6); z-index: 10000;
-  display: flex; align-items: center; justify-content: center;
-}
-.vp2fa-scan-modal-content {
-  background: #fff; border-radius: 12px; overflow: hidden;
-  width: 90%; max-width: 480px; box-shadow: 0 8px 32px rgba(0,0,0,0.2);
-}
-.vp2fa-scan-header {
-  display: flex; align-items: center; justify-content: space-between;
-  padding: 12px 16px; background: #f6f8fa; border-bottom: 1px solid #d0d7de;
-  font-weight: 600; font-size: 15px; color: #1f2328;
-}
-.vp2fa-scan-close {
-  background: none; border: none; font-size: 18px; cursor: pointer;
-  color: #57606a; padding: 4px 8px; border-radius: 4px;
-}
+.vp2fa-scan-modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 10000; display: flex; align-items: center; justify-content: center; }
+.vp2fa-scan-modal-content { background: #fff; border-radius: 12px; overflow: hidden; width: 90%; max-width: 480px; box-shadow: 0 8px 32px rgba(0,0,0,0.2); }
+.vp2fa-scan-header { display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; background: #f6f8fa; border-bottom: 1px solid #d0d7de; font-weight: 600; font-size: 15px; color: #1f2328; }
+.vp2fa-scan-close { background: none; border: none; font-size: 18px; cursor: pointer; color: #57606a; padding: 4px 8px; border-radius: 4px; }
 .vp2fa-scan-close:hover { background: #eaeef2; }
-.vp2fa-scan-region {
-  position: relative; width: 100%; aspect-ratio: 1; background: #000;
-  display: flex; align-items: center; justify-content: center;
-}
+.vp2fa-scan-region { position: relative; width: 100%; aspect-ratio: 1; background: #000; display: flex; align-items: center; justify-content: center; }
 .vp2fa-scan-placeholder { text-align: center; color: #fff; }
 .vp2fa-scan-placeholder p { margin: 8px 0; font-size: 14px; }
 .vp2fa-scan-icon { font-size: 48px; margin-bottom: 12px; }
 .vp2fa-scan-hint { font-size: 12px; color: #aaa; }
-.vp2fa-scan-result {
-  padding: 12px 16px; background: #e6fffa; border-top: 1px solid #80d4c8;
-  font-size: 13px; color: #1a7a6c; word-break: break-all;
-}
-.vp2fa-scan-footer {
-  display: flex; gap: 8px; padding: 12px 16px; justify-content: flex-end;
-  border-top: 1px solid #d0d7de; flex-wrap: wrap;
-}
-/* 扫描框取景器样式 */
+.vp2fa-scan-result { padding: 12px 16px; background: #e6fffa; border-top: 1px solid #80d4c8; font-size: 13px; color: #1a7a6c; word-break: break-all; }
+.vp2fa-scan-footer { display: flex; gap: 8px; padding: 12px 16px; justify-content: flex-end; border-top: 1px solid #d0d7de; flex-wrap: wrap; }
 .vp2fa-scan-region video { width: 100%; height: 100%; object-fit: cover; }
-.vp2fa-scan-region .scan-overlay {
-  position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%);
-  width: 70%; height: 70%; border: 2px solid #58a6ff; border-radius: 12px;
-  box-shadow: 0 0 0 9999px rgba(0,0,0,0.5);
-}
+.vp2fa-scan-region .scan-overlay { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 70%; height: 70%; border: 2px solid #58a6ff; border-radius: 12px; box-shadow: 0 0 0 9999px rgba(0,0,0,0.5); }
 
 @media (prefers-color-scheme: dark) {
   .vp2fa-card { background: #161b22; border-color: #30363d; }
@@ -168,7 +135,6 @@
   .vp2fa-scan-footer { border-color: #30363d; }
   .vp2fa-scan-close:hover { background: #21262d; }
 }
-
 @media (max-width: 640px) {
   .vp2fa-input-grid { grid-template-columns: 1fr; }
   .vp2fa-add-row { grid-template-columns: 1fr; }
@@ -187,12 +153,10 @@ const CIRCLE_RADIUS = 16
 const CIRCUMFERENCE = 2 * Math.PI * CIRCLE_RADIUS
 const MIN_SECRET_BYTES = 10
 
-// ===== 多编码密钥解码 =====
 const decodeSecret = (str) => {
   const cleaned = str.replace(/[^a-zA-Z0-9]/g, '').toUpperCase()
   if (!cleaned) return null
 
-  // 1. Base32
   const base32Alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567'
   let isBase32 = true
   for (const c of cleaned) {
@@ -208,7 +172,6 @@ const decodeSecret = (str) => {
     }
   }
 
-  // 2. Hex
   if (/^[0-9A-F]+$/i.test(cleaned)) {
     const hexStr = cleaned.length % 2 === 0 ? cleaned : cleaned + '0'
     const bytes = []
@@ -216,7 +179,6 @@ const decodeSecret = (str) => {
     if (bytes.length >= MIN_SECRET_BYTES) return { key: new Uint8Array(bytes), format: 'Hex', isTestMode: false }
   }
 
-  // 3. 纯数字
   if (/^\d+$/.test(cleaned)) {
     const num = BigInt(cleaned)
     const bytes = []
@@ -226,7 +188,6 @@ const decodeSecret = (str) => {
     if (bytes.length >= MIN_SECRET_BYTES) return { key: new Uint8Array(bytes), format: '数字', isTestMode: false }
   }
 
-  // 4. 测试模式
   let bits = ''
   for (const c of cleaned) bits += c.charCodeAt(0).toString(2).padStart(8, '0')
   while (bits.length < 80) bits += '0'.repeat(8)
@@ -235,13 +196,11 @@ const decodeSecret = (str) => {
   return { key: new Uint8Array(bytes), format: '测试', isTestMode: true }
 }
 
-// ===== HMAC-SHA1 =====
 const createHmacSigner = async (key) => {
   const cryptoKey = await crypto.subtle.importKey('raw', key, { name: 'HMAC', hash: 'SHA-1' }, false, ['sign'])
   return (data) => crypto.subtle.sign('HMAC', cryptoKey, data)
 }
 
-// ===== 生成TOTP =====
 const generateTotp = async (secret) => {
   const decoded = decodeSecret(secret)
   if (!decoded || decoded.key.length < MIN_SECRET_BYTES) throw new Error('密钥长度不足')
@@ -255,27 +214,36 @@ const generateTotp = async (secret) => {
   return { code: code.toString().padStart(6, '0'), format: decoded.format, isTestMode: decoded.isTestMode }
 }
 
-// ===== 解析 otpauth:// 链接 =====
 const parseOtpAuth = (uri) => {
   try {
-    const url = new URL(uri)
+    const url = new URL(uri.trim())
     if (url.protocol !== 'otpauth:') return null
     const params = new URLSearchParams(url.search)
-    return {
-      label: decodeURIComponent(url.pathname.split('/')[1] || '未命名账号'),
-      secret: params.get('secret'),
-      issuer: params.get('issuer') || ''
+    const secret = params.get('secret')
+    if (!secret) return null
+    
+    const labelRaw = decodeURIComponent(url.pathname.split('/')[1] || '')
+    let issuerFromLabel = '', account = labelRaw
+    if (labelRaw.includes(':')) {
+      const idx = labelRaw.indexOf(':')
+      issuerFromLabel = labelRaw.substring(0, idx)
+      account = labelRaw.substring(idx + 1)
     }
+    
+    const issuerParam = params.get('issuer') || issuerFromLabel
+    const friendlyName = issuerParam 
+      ? (account ? `${issuerParam} - ${account}` : issuerParam)
+      : (account || '未命名账号')
+    
+    return { label: friendlyName, secret: secret }
   } catch { return null }
 }
 
-// ===== 校验密钥 =====
 const isValidPersistentSecret = (secret) => {
   const decoded = decodeSecret(secret)
   return decoded && !decoded.isTestMode
 }
 
-// ===== 渲染列表 =====
 let renderErrorCache = new Set()
 
 const renderList = async () => {
@@ -326,7 +294,6 @@ const renderList = async () => {
   list.innerHTML = cardsHtml.join('')
 }
 
-// ===== Toast =====
 const showToast = (msg) => {
   const toast = document.createElement('div')
   toast.textContent = msg
@@ -335,31 +302,29 @@ const showToast = (msg) => {
   setTimeout(() => toast.remove(), 1500)
 }
 
-// ===== 二维码扫描相关 =====
-let html5QrcodeScanner = null
+let cameraScanner = null
 let scannedOtpAuth = null
 
 const loadHtml5Qrcode = () => {
   return new Promise((resolve, reject) => {
     if (window.Html5Qrcode) return resolve(window.Html5Qrcode)
     const script = document.createElement('script')
-    script.src = 'https://unpkg.com/html5-qrcode@2.3.8/dist/html5-qrcode.min.js'
-    script.onload = () => resolve(window.Html5Qrcode)
-    script.onerror = () => reject(new Error('二维码库加载失败'))
+    script.src = 'https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/dist/html5-qrcode.min.js'
+    script.onload = () => { console.log('[2FA] 二维码库加载成功'); resolve(window.Html5Qrcode); }
+    script.onerror = () => { console.error('[2FA] 二维码库加载失败'); reject(new Error('二维码库加载失败')); }
     document.head.appendChild(script)
   })
 }
 
-// 停止摄像头扫描
 const stopCameraScan = async () => {
-  if (html5QrcodeScanner) {
-    try { await html5QrcodeScanner.stop() } catch {}
-    try { await html5QrcodeScanner.clear() } catch {}
-    html5QrcodeScanner = null
+  if (cameraScanner) {
+    try { await cameraScanner.stop() } catch {}
+    try { await cameraScanner.clear() } catch {}
+    cameraScanner = null
+    console.log('[2FA] 摄像头扫描已清理')
   }
 }
 
-// 打开扫描弹窗
 const openScanModal = async () => {
   const modal = document.getElementById('vp2faScanModal')
   const resultDiv = document.getElementById('vp2faScanResult')
@@ -374,32 +339,28 @@ const openScanModal = async () => {
   placeholder.style.display = 'block'
   region.querySelectorAll('.scan-overlay').forEach(el => el.remove())
 
-  // 添加取景器遮罩
   const overlay = document.createElement('div')
   overlay.className = 'scan-overlay'
   region.appendChild(overlay)
 
   try {
     const Html5Qrcode = await loadHtml5Qrcode()
-    html5QrcodeScanner = new Html5Qrcode('vp2faScanRegion')
-    
+    cameraScanner = new Html5Qrcode('vp2faScanRegion')
     const config = { fps: 10, qrbox: { width: 250, height: 250 } }
     
-    await html5QrcodeScanner.start(
+    await cameraScanner.start(
       { facingMode: 'environment' },
       config,
-      (decodedText) => {
-        handleScanSuccess(decodedText)
-      },
-      () => {} // 忽略扫描中的错误
+      (decodedText) => handleScanSuccess(decodedText),
+      () => {}
     )
+    console.log('[2FA] 摄像头扫描已启动')
   } catch (err) {
-    placeholder.innerHTML = `❌ 无法启动摄像头：${err.message}<br><small>请确认已授予摄像头权限，或使用HTTPS访问</small>`
+    placeholder.innerHTML = `❌ 无法启动摄像头：${err.message}<br><small>请确认已授予摄像头权限，或使用HTTPS访问。也可直接点「选择图片」</small>`
     console.error('[2FA] 摄像头启动失败：', err)
   }
 }
 
-// 处理扫描/解析成功的结果
 const handleScanSuccess = (decodedText) => {
   const parsed = parseOtpAuth(decodedText)
   const resultDiv = document.getElementById('vp2faScanResult')
@@ -411,29 +372,22 @@ const handleScanSuccess = (decodedText) => {
     resultDiv.style.display = 'block'
     confirmBtn.style.display = 'inline-block'
     showToast('二维码识别成功')
-    // 识别成功后自动停止摄像头扫描，节省资源
     stopCameraScan()
   } else {
-    resultDiv.innerHTML = `⚠️ 识别到的内容不是有效的2FA二维码<br><small>${decodedText.substring(0, 50)}...</small>`
+    resultDiv.innerHTML = `⚠️ 识别到的内容不是有效的2FA二维码<br><small>${decodedText.substring(0, 80)}...</small>`
     resultDiv.style.display = 'block'
   }
 }
 
-// 关闭扫描弹窗
 const closeScanModal = async () => {
   const modal = document.getElementById('vp2faScanModal')
-  const imageInput = document.getElementById('vp2faImageInput')
   modal.style.display = 'none'
-  // 重置文件输入，避免下次选同一张图不触发change事件
-  imageInput.value = ''
   await stopCameraScan()
 }
 
-// ===== 事件绑定 =====
 onMounted(async () => {
   await nextTick()
 
-  // 列表点击委托
   document.getElementById('vp2faList').addEventListener('click', (e) => {
     const btn = e.target.closest('.vp2fa-btn')
     if (!btn) return
@@ -449,36 +403,37 @@ onMounted(async () => {
     }
   })
 
-  // 添加账号
   document.getElementById('vp2faAddBtn').addEventListener('click', () => {
     const labelInput = document.getElementById('vp2faLabel')
     const secretInput = document.getElementById('vp2faSecret')
     const label = labelInput.value.trim()
     const input = secretInput.value.trim()
-    if (!input) { alert('请输入2FA密钥'); return }
+    if (!input) { alert('请输入2FA密钥或otpauth://链接'); return }
 
     const parsed = parseOtpAuth(input)
     const secret = parsed ? parsed.secret : input
     const decoded = decodeSecret(secret)
     if (!decoded || decoded.key.length < MIN_SECRET_BYTES) {
-      alert('密钥格式无效！\n\n✅ 支持的格式：\n1. Base32（如JBSWY3DPEHPK3PXP）\n2. Hex（如DEADBEEF12345678）\n3. 数字串\n4. 也可直接粘贴otpauth://链接')
+      alert('密钥格式无效！<br><br>✅ 支持的格式：<br>1. Base32（如JBSWY3DPEHPK3PXP）<br>2. Hex（如DEADBEEF12345678）<br>3. 数字串<br>4. otpauth://标准链接')
       return
     }
 
     const accounts = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]')
-    accounts.push({ id: Date.now().toString(36), label: parsed?.label || label || '未命名账号', secret })
+    accounts.push({ 
+      id: Date.now().toString(36), 
+      label: parsed?.label || label || '未命名账号', 
+      secret 
+    })
     localStorage.setItem(STORAGE_KEY, JSON.stringify(accounts))
     labelInput.value = ''; secretInput.value = ''
     renderList()
     showToast(decoded.isTestMode ? '测试账号添加成功（刷新后失效）' : '账号添加成功')
   })
 
-  // ===== 扫描二维码相关 =====
   document.getElementById('vp2faScanBtn').addEventListener('click', openScanModal)
   document.getElementById('vp2faScanClose').addEventListener('click', closeScanModal)
   document.getElementById('vp2faScanStop').addEventListener('click', closeScanModal)
   
-  // 确认添加扫描到的账号
   document.getElementById('vp2faScanConfirm').addEventListener('click', () => {
     if (!scannedOtpAuth) return
     const accounts = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]')
@@ -493,10 +448,8 @@ onMounted(async () => {
     showToast('账号添加成功')
   })
 
-  // ===== 新增：选择图片解析二维码 =====
   const imageInput = document.getElementById('vp2faImageInput')
   document.getElementById('vp2faPickImage').addEventListener('click', async () => {
-    // 选图前先停止摄像头扫描，避免资源冲突
     await stopCameraScan()
     imageInput.click()
   })
@@ -505,29 +458,35 @@ onMounted(async () => {
     const file = e.target.files[0]
     if (!file) return
 
+    const resultDiv = document.getElementById('vp2faScanResult')
     showToast('正在解析图片...')
+    
     try {
       const Html5Qrcode = await loadHtml5Qrcode()
-      // 使用html5-qrcode的图片解析API
-      const result = await Html5Qrcode.scanFile(file, true)
+      if (!Html5Qrcode) throw new Error('二维码库未加载')
+      
+      const fileScanner = new Html5Qrcode('vp2faFileScanRegion')
+      const result = await fileScanner.scanFile(file, true)
+      await fileScanner.clear()
+      
+      console.log('[2FA] 图片解析结果：', result)
       handleScanSuccess(result)
     } catch (err) {
       console.error('[2FA] 图片解析失败：', err)
-      const resultDiv = document.getElementById('vp2faScanResult')
-      resultDiv.innerHTML = `❌ 图片中未识别到二维码<br><small>请确保图片清晰、二维码完整无遮挡</small>`
+      resultDiv.innerHTML = `❌ 未检测到二维码<br><small>请尝试：1) 用系统截图代替手机拍照 2) 确保二维码完整居中 3) 刷新页面后重试</small>`
       resultDiv.style.display = 'block'
       showToast('图片解析失败')
+    } finally {
+      e.target.value = ''
     }
   })
 
-  // 导出配置
   document.getElementById('vp2faExportBtn').addEventListener('click', () => {
     const data = JSON.stringify(JSON.parse(localStorage.getItem(STORAGE_KEY) || []), null, 2)
     navigator.clipboard.writeText(data)
     showToast('配置已复制到剪贴板')
   })
 
-  // 导入配置
   document.getElementById('vp2faImportBtn').addEventListener('click', () => {
     const raw = prompt('请粘贴之前导出的 JSON 配置：')
     if (!raw) return
@@ -544,11 +503,10 @@ onMounted(async () => {
       })
       localStorage.setItem(STORAGE_KEY, JSON.stringify(accounts))
       renderList()
-      alert(`导入完成：\n✅ 成功添加 ${added} 个有效账号\n🧪 过滤 ${filtered} 个测试模式账号`)
+      alert(`导入完成：<br>✅ 成功添加 ${added} 个有效账号<br>🧪 过滤 ${filtered} 个测试模式账号`)
     } catch { alert('JSON 格式错误，导入失败') }
   })
 
-  // 清空全部
   document.getElementById('vp2faClearBtn').addEventListener('click', () => {
     if (confirm('确定要清空所有账号吗？此操作不可恢复。')) {
       localStorage.removeItem(STORAGE_KEY)
