@@ -8,29 +8,23 @@ export default defineConfig({
   base: '/',
   srcDir: '.',
   outDir: '.vitepress/dist',
-  i18n: {
-    locales: {
-      'zh-CN': {
-        label: '简体中文',
-        title: 'TouriCN',
-        description: '神秘的站点。',
-        search: {
-          button: { buttonText: '搜索', placeholder: '搜索文档...' },
-          modal: {
-            displayDetails: '显示详情',
-            resetButtonTitle: '重置搜索',
-            noResultsText: '没有找到相关结果。',
-            footer: { selectText: '选择', navigateText: '切换', closeText: '关闭' }
-          }
+  search: {
+    provider: 'local',
+    options: {
+      placeholder: '搜索文档...',
+      translations: {
+        button: { buttonText: '搜索' },
+        modal: {
+          displayDetails: '显示详情',
+          resetButtonTitle: '重置搜索',
+          noResultsText: '没有找到相关结果。',
+          footer: { selectText: '选择', navigateText: '切换', closeText: '关闭' }
         }
       }
     }
   },
-  search: {
-    provider: 'local',
-    options: {
-      placeholder: '搜索文档...'
-    }
+  sitemap: {
+    hostname: 'https://touricn.github.io'
   },
   vite: {
     plugins: [
@@ -41,8 +35,7 @@ export default defineConfig({
           'README.md',
           '.vitepress/',
           '.github/',
-          'node_modules/',
-          '*.html'
+          'node_modules/'
         ],
         collapsed: true
       })
@@ -53,7 +46,7 @@ export default defineConfig({
     nav: [
       { text: '主页', link: '/' },
       { text: '文章', link: '/posts' },
-      { text: '工具', link: '/tools' } 
+      { text: '工具', link: '/tools' }
     ],
     socialLinks: [
       { icon: 'github', link: 'https://github.com/TouriCN/touricn.github.io' },
@@ -83,9 +76,6 @@ export default defineConfig({
     returnToTopLabel: '返回顶部',
     externalLinkIcon: true,
     lastUpdatedText: '最后更新',
-    outlineTitle: '页面导航'
+    outlineTitle: '页面导航',
   }
-  sitemap: {
-    hostname: "https://touricn.github.io",
-  },
 })
