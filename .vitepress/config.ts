@@ -36,7 +36,7 @@ export default defineConfig({
     plugins: [
       AutoSidebar({
         titleFromFile: true,
-        path: 'posts',
+        path: '.',
         ignoreList: [
           'README.md',
           '.vitepress/',
