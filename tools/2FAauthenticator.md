@@ -1,16 +1,13 @@
 ---
 title: 2FA 验证码密钥工具
 head:
-  # 样式
-  - tag: link
-    attrs:
-      rel: stylesheet
+  - - link
+    - rel: stylesheet
       href: /tool/2FAauthenticator.css
-  # 脚本（不要 defer，让 VP 自己处理）
-  - tag: script
-    attrs:
-      src: /tool/2FAauthenticator.js
+  - - script
+    - src: /tool/2FAauthenticator.js
 ---
+
 # 2FA验证码密钥工具
 
 <ClientOnly>
@@ -33,5 +30,6 @@ head:
 
 ## 该工具有什么用处？
 仅使用网页端，方便快捷使用；只需要输入账号名和需要使用的账户2FA密钥，即可生成对应的2FA验证码密钥，来方便有需时候使用，避免了有时候找不到2FA验证器应用的时候，无法登录自己的账户。
+
 ## 注意
 使用该工具极有可能会导致你的账户被盗！请尽量避免该网页被露出，以免账号被盗。
