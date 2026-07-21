@@ -1,12 +1,15 @@
 ---
-title: 2FA 认证器
+title: 2FA 验证码密钥工具
 head:
-  - - link
-    - rel: stylesheet
+  # 样式
+  - tag: link
+    attrs:
+      rel: stylesheet
       href: /tool/2FAauthenticator.css
-  - - script
-    - src: /tool/2FAauthenticator.js
-      defer: true
+  # 脚本（不要 defer，让 VP 自己处理）
+  - tag: script
+    attrs:
+      src: /tool/2FAauthenticator.js
 ---
 # 2FA验证码密钥工具
 <ClientOnly>
