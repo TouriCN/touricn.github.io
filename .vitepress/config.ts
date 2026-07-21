@@ -85,4 +85,7 @@ export default defineConfig({
     lastUpdatedText: '最后更新',
     outlineTitle: '页面导航'
   }
+  sitemap: {
+    hostname: "https://touricn.github.io",
+  },
 })
