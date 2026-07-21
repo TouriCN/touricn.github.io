@@ -1,20 +1,10 @@
----
-title: 2FA 验证码密钥工具
-head:
-  - - link
-    - rel: stylesheet
-      href: /tool/2FAauthenticator.css
-  - - script
-    - src: /tool/2FAauthenticator.js
----
-
 # 2FA验证码密钥工具
 
 <ClientOnly>
 <div class="vp2fa-root">
   <div id="vp2faList"></div>
   <div class="vp2fa-form">
-    <div class="vp2fa-input-group">
+    <div class="vp2fa-input-grid">
       <input id="vp2faLabel" class="vp2fa-input" placeholder="账号名（如：GitHub）">
       <input id="vp2faSecret" class="vp2fa-input" placeholder="密钥（任意字符均可）">
     </div>
@@ -26,24 +16,317 @@ head:
     </div>
   </div>
 </div>
-
-<div class="vp2fa-modal-overlay" id="vp2faImportModal">
-  <div class="vp2fa-modal">
-    <h3>📥 导入配置</h3>
-    <p>粘贴之前导出的 JSON 配置：</p>
-    <textarea id="vp2faImportData" placeholder='[{"label":"GitHub","secret":"JBSWY3DPEHPK3PXP"}]'></textarea>
-    <div class="vp2fa-modal-actions">
-      <button class="vp2fa-btn-confirm" id="vp2faImportConfirm">确认导入</button>
-      <button class="vp2fa-btn-cancel" id="vp2faImportCancel">取消</button>
-    </div>
-  </div>
-</div>
 </ClientOnly>
 
 ## 该工具有什么用处？
-
-仅使用网页端，方便快捷使用；只需要输入账号名和需要使用的账户2FA密钥，即可生成对应的2FA验证码密钥，来方便有需时候使用，避免了有时候找不到2FA验证器应用的时候，无法登录自己的账户。
+仅使用网页端，方便快捷使用；只需要输入账号名和需要使用的账户2FA密钥，即可生成对应的2FA验证码，避免找不到验证器应用时无法登录账户。
 
 ## 注意
+使用该工具极有可能会导致你的账户被盗！请尽量避免页面内容被他人看到，不要在不安全的设备上使用。
 
-使用该工具极有可能会导致你的账户被盗！请尽量避免该网页被露出，以免账号被盗。
+<style>
+/* 所有样式全嵌，不用 scoped，前缀隔离不会冲突 */
+.vp2fa-root {
+  margin: 1.5rem 0;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+.vp2fa-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  margin-bottom: 10px;
+  background: #f6f8fa; /* 兜底色，不怕主题变量失效 */
+  border: 1px solid #d0d7de;
+  border-radius: 12px;
+  transition: border-color 0.2s;
+}
+.vp2fa-card:hover { border-color: #58a6ff; }
+.vp2fa-label {
+  display: block;
+  font-size: 13px;
+  color: #57606a;
+  margin-bottom: 4px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.vp2fa-code {
+  display: block;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 24px;
+  font-weight: 600;
+  letter-spacing: 2px;
+  color: #1f2328;
+}
+.vp2fa-actions { display: flex; gap: 8px; margin-left: 16px; }
+.vp2fa-timer { position: relative; width: 40px; height: 40px; }
+.vp2fa-timer svg { transform: rotate(-90deg); width: 100%; height: 100%; }
+.vp2fa-timer .bg { fill: none; stroke: #d0d7de; stroke-width: 3; }
+.vp2fa-timer .progress {
+  fill: none; stroke: #58a6ff; stroke-width: 3; stroke-linecap: round;
+  transition: stroke-dashoffset 0.5s linear;
+}
+.vp2fa-timer.warn .progress { stroke: #d29922; }
+.vp2fa-timer.expired .progress { stroke: #f85149; }
+.vp2fa-timer-text {
+  position: absolute; top: 50%; left: 50%;
+  transform: translate(-50%, -50%);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 12px; font-weight: 600; color: #1f2328;
+}
+.vp2fa-btn {
+  padding: 6px; border: none; background: transparent;
+  color: #57606a; cursor: pointer; border-radius: 6px;
+  display: inline-flex; align-items: center; justify-content: center;
+  transition: all 0.2s;
+}
+.vp2fa-btn:hover { color: #58a6ff; background: rgba(88,166,255,0.1); }
+.vp2fa-btn.delete:hover { color: #f85149; background: rgba(248,81,73,0.1); }
+.vp2fa-form { margin-top: 20px; padding-top: 20px; border-top: 1px dashed #d0d7de; }
+.vp2fa-input-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px; }
+.vp2fa-input {
+  width: 100%; padding: 10px 12px; font-size: 14px;
+  border: 1px solid #d0d7de; border-radius: 6px; background: #fff;
+  color: #1f2328; box-sizing: border-box;
+}
+.vp2fa-input:focus {
+  outline: none; border-color: #58a6ff;
+  box-shadow: 0 0 0 3px rgba(88,166,255,0.2);
+}
+.vp2fa-add-btn {
+  width: 100%; padding: 10px; font-size: 14px; font-weight: 500;
+  border: 1px dashed #d0d7de; border-radius: 6px; background: transparent;
+  color: #57606a; cursor: pointer; transition: all 0.2s;
+}
+.vp2fa-add-btn:hover { border-color: #58a6ff; color: #58a6ff; }
+.vp2fa-tools { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
+.vp2fa-tool-btn {
+  padding: 6px 12px; font-size: 12px; border-radius: 6px;
+  border: 1px solid #d0d7de; background: #f6f8fa;
+  color: #57606a; cursor: pointer; transition: all 0.2s;
+}
+.vp2fa-tool-btn:hover { border-color: #58a6ff; color: #58a6ff; }
+.vp2fa-tool-btn.danger:hover { border-color: #f85149; color: #f85149; }
+
+/* 暗色模式用原生媒体查询，不用 Vue 的 :deep，100%生效 */
+@media (prefers-color-scheme: dark) {
+  .vp2fa-card { background: #161b22; border-color: #30363d; }
+  .vp2fa-label { color: #8b949e; }
+  .vp2fa-code { color: #e6edf3; }
+  .vp2fa-timer .bg { stroke: #30363d; }
+  .vp2fa-timer-text { color: #e6edf3; }
+  .vp2fa-btn { color: #8b949e; }
+  .vp2fa-form { border-color: #30363d; }
+  .vp2fa-input { background: #0d1117; border-color: #30363d; color: #e6edf3; }
+  .vp2fa-add-btn { border-color: #30363d; color: #8b949e; }
+  .vp2fa-add-btn:hover { border-color: #58a6ff; color: #58a6ff; }
+  .vp2fa-tool-btn { background: #161b22; border-color: #30363d; color: #8b949e; }
+  .vp2fa-tool-btn:hover { border-color: #58a6ff; color: #58a6ff; }
+}
+
+/* 移动端适配 */
+@media (max-width: 640px) {
+  .vp2fa-input-grid { grid-template-columns: 1fr; }
+  .vp2fa-code { font-size: 20px; }
+  .vp2fa-actions { gap: 4px; margin-left: 8px; }
+}
+</style>
+
+<!-- 核心：用 script setup，VitePress 只会在浏览器端执行，SSR 完全不碰 -->
+<script setup>
+import { onMounted } from 'vue'
+
+// 所有逻辑都包在 onMounted 里，确保 DOM 已经加载完成
+onMounted(() => {
+  // 常量定义
+  const STORAGE_KEY = 'vp2fa_accounts'
+  const PERIOD = 30
+  const CIRCLE_RADIUS = 16
+  const CIRCUMFERENCE = 2 * Math.PI * CIRCLE_RADIUS
+
+  // Base32 解码（容错，跳过非法字符）
+  const base32Decode = (str) => {
+    const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567'
+    str = str.replace(/=+$/, '').toUpperCase().replace(/\s/g, '')
+    let bits = '', bytes = []
+    for (let i = 0; i < str.length; i++) {
+      const val = alphabet.indexOf(str[i])
+      if (val === -1) continue
+      bits += val.toString(2).padStart(5, '0')
+    }
+    for (let i = 0; i < bits.length - 7; i += 8) {
+      bytes.push(parseInt(bits.substr(i, 8), 2))
+    }
+    return new Uint8Array(bytes)
+  }
+
+  // HMAC-SHA1
+  const hmacSha1 = async (key, data) => {
+    const cryptoKey = await crypto.subtle.importKey(
+      'raw', key, { name: 'HMAC', hash: 'SHA-1' }, false, ['sign']
+    )
+    return new Uint8Array(await crypto.subtle.sign('HMAC', cryptoKey, data))
+  }
+
+  // 生成 TOTP
+  const generateTotp = async (secret) => {
+    const key = base32Decode(secret)
+    const counter = Math.floor(Date.now() / 1000 / PERIOD)
+    const buffer = new ArrayBuffer(8)
+    new DataView(buffer).setUint32(4, counter, false)
+    const hs = await hmacSha1(key, buffer)
+    const offset = hs[hs.length - 1] & 0x0F
+    const code = (
+      ((hs[offset] & 0x7F) << 24) |
+      ((hs[offset + 1] & 0xFF) << 16) |
+      ((hs[offset + 2] & 0xFF) << 8) |
+      (hs[offset + 3] & 0xFF)
+    ) % 1000000
+    return code.toString().padStart(6, '0')
+  }
+
+  // 解析 otpauth 链接
+  const parseOtpAuth = (uri) => {
+    try {
+      const url = new URL(uri)
+      if (url.protocol !== 'otpauth:') return null
+      const params = new URLSearchParams(url.search)
+      return {
+        label: decodeURIComponent(url.pathname.split('/')[1] || '未命名账号'),
+        secret: params.get('secret')
+      }
+    } catch { return null }
+  }
+
+  // 渲染账号列表
+  const renderList = async () => {
+    const list = document.getElementById('vp2faList')
+    if (!list) return
+    const accounts = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]')
+    const remaining = PERIOD - Math.floor(Date.now() / 1000) % PERIOD
+    const offset = CIRCUMFERENCE * (remaining / PERIOD)
+    list.innerHTML = ''
+
+    for (const acc of accounts) {
+      const code = await generateTotp(acc.secret)
+      const card = document.createElement('div')
+      card.className = 'vp2fa-card'
+      card.innerHTML = `
+        <div class="vp2fa-info">
+          <span class="vp2fa-label">${acc.label}</span>
+          <span class="vp2fa-code">${code.slice(0,3)} ${code.slice(3)}</span>
+        </div>
+        <div class="vp2fa-actions">
+          <div class="vp2fa-timer ${remaining <=5 ? 'warn' : ''} ${remaining <=0 ? 'expired' : ''}">
+            <svg viewBox="0 0 40 40">
+              <circle class="bg" cx="20" cy="20" r="${CIRCLE_RADIUS}"/>
+              <circle class="progress" cx="20" cy="20" r="${CIRCLE_RADIUS}"
+                stroke-dasharray="${CIRCUMFERENCE}" stroke-dashoffset="${offset}"/>
+            </svg>
+            <span class="vp2fa-timer-text">${remaining}</span>
+          </div>
+          <button class="vp2fa-btn" data-action="copy" data-code="${code}">📋</button>
+          <button class="vp2fa-btn delete" data-action="delete" data-id="${acc.id}">🗑️</button>
+        </div>
+      `
+      list.appendChild(card)
+    }
+  }
+
+  // 事件绑定（事件委托，不用逐个绑定）
+  document.getElementById('vp2faList').addEventListener('click', (e) => {
+    const btn = e.target.closest('.vp2fa-btn')
+    if (!btn) return
+    if (btn.dataset.action === 'copy') {
+      navigator.clipboard.writeText(btn.dataset.code)
+      showToast('验证码已复制')
+    }
+    if (btn.dataset.action === 'delete') {
+      const accounts = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]')
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(accounts.filter(a => a.id !== btn.dataset.id)))
+      renderList()
+    }
+  })
+
+  // 添加账号
+  document.getElementById('vp2faAddBtn').addEventListener('click', () => {
+    const labelInput = document.getElementById('vp2faLabel')
+    const secretInput = document.getElementById('vp2faSecret')
+    const label = labelInput.value.trim()
+    const input = secretInput.value.trim()
+    if (!input) return alert('请输入密钥')
+
+    const parsed = parseOtpAuth(input)
+    const secret = parsed ? parsed.secret : input
+    const accounts = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]')
+    accounts.push({
+      id: Date.now().toString(36),
+      label: parsed?.label || label || '未命名账号',
+      secret
+    })
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(accounts))
+    labelInput.value = ''
+    secretInput.value = ''
+    renderList()
+  })
+
+  // 导出配置
+  document.getElementById('vp2faExportBtn').addEventListener('click', () => {
+    const data = JSON.stringify(JSON.parse(localStorage.getItem(STORAGE_KEY) || []), null, 2)
+    navigator.clipboard.writeText(data)
+    showToast('配置已复制到剪贴板')
+  })
+
+  // 导入配置
+  document.getElementById('vp2faImportBtn').addEventListener('click', () => {
+    const raw = prompt('请粘贴之前导出的 JSON 配置：')
+    if (!raw) return
+    try {
+      const imported = JSON.parse(raw)
+      if (!Array.isArray(imported)) throw new Error()
+      const accounts = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]')
+      imported.forEach(item => {
+        if (item.label && item.secret) {
+          accounts.push({
+            id: Date.now().toString(36) + Math.random().toString(36).slice(2),
+            label: item.label,
+            secret: item.secret
+          })
+        }
+      })
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(accounts))
+      renderList()
+      alert('导入成功')
+    } catch {
+      alert('JSON 格式错误，导入失败')
+    }
+  })
+
+  // 清空全部
+  document.getElementById('vp2faClearBtn').addEventListener('click', () => {
+    if (confirm('确定要清空所有账号吗？此操作不可恢复。')) {
+      localStorage.removeItem(STORAGE_KEY)
+      renderList()
+    }
+  })
+
+  // 简易 Toast 提示
+  const showToast = (msg) => {
+    const toast = document.createElement('div')
+    toast.textContent = msg
+    toast.style.cssText = `
+      position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%);
+      background: #1f2328; color: #fff; padding: 8px 16px;
+      border-radius: 6px; z-index: 9999; font-size: 14px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    `
+    document.body.appendChild(toast)
+    setTimeout(() => toast.remove(), 1500)
+  }
+
+  // 初始化 + 定时刷新
+  renderList()
+  setInterval(renderList, 1000)
+})
+</script>
