@@ -1,6 +1,13 @@
-# 2FA验证码密钥存储器
+# 2FA验证码密钥工具
 <style>
-/* VitePress 2FA 认证器 - 完整版（含导出/导入/清空） */
+/* ============================================================
+   VitePress 2FA 认证器 · 完整单文件版
+   - 卡片式 UI，自动跟随 VP 亮/暗主题
+   - 不校验密钥合法性
+   - 兼容 VitePress SSR + GitHub Pages
+   - 工具按钮使用 addEventListener（不会变源码）
+   ============================================================ */
+
 .vp2fa-root {
   margin: 1.5rem 0;
   font-family: var(--vp-font-family-base);
@@ -9,7 +16,7 @@
   box-sizing: border-box;
 }
 
-/* 账号卡片 */
+/* ===== 账号卡片 ===== */
 .vp2fa-card {
   display: flex;
   align-items: center;
@@ -29,7 +36,7 @@
   border-color: var(--vp-c-brand-1, #58a6ff);
 }
 
-/* 账号信息 */
+/* ===== 账号信息 ===== */
 .vp2fa-info {
   min-width: 0;
   flex: 1;
@@ -58,7 +65,7 @@
   color: var(--vp-c-text-1, #e6edf3);
 }
 
-/* 操作区 */
+/* ===== 操作区 ===== */
 .vp2fa-actions {
   display: flex;
   align-items: center;
@@ -66,7 +73,7 @@
   margin-left: 16px;
 }
 
-/* 倒计时圆环 */
+/* ===== 倒计时圆环 ===== */
 .vp2fa-timer {
   position: relative;
   width: 40px;
@@ -112,7 +119,7 @@
   color: var(--vp-c-text-1, #e6edf3);
 }
 
-/* 按钮 */
+/* ===== 图标按钮 ===== */
 .vp2fa-btn {
   padding: 6px;
   border: none;
@@ -141,7 +148,7 @@
   height: 18px;
 }
 
-/* 添加表单 */
+/* ===== 添加表单 ===== */
 .vp2fa-form {
   margin-top: 20px;
   padding-top: 20px;
@@ -201,34 +208,30 @@
   color: var(--vp-c-brand-1, #58a6ff);
 }
 
-/* 工具按钮行 */
+/* ===== 工具按钮区 ===== */
 .vp2fa-tools {
   display: flex;
   gap: 8px;
   margin-top: 12px;
+  flex-wrap: wrap;
 }
 .vp2fa-tool-btn {
-  flex: 1;
-  padding: 8px 10px;
-  font-size: 13px;
+  padding: 6px 14px;
+  font-size: 12px;
   font-weight: 500;
-  border: 1px solid var(--vp-c-divider, #d0d7de);
   border-radius: 6px;
-  background: transparent;
+  border: 1px solid var(--vp-c-divider, #d0d7de);
+  background: var(--vp-c-bg-soft, #f6f8fa);
   color: var(--vp-c-text-2, #57606a);
   cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 4px;
   transition: all 0.2s ease;
 }
 .vp2fa-tool-btn:hover {
   border-color: var(--vp-c-brand-1, #58a6ff);
   color: var(--vp-c-brand-1, #58a6ff);
-  background-color: rgba(88, 166, 255, 0.06);
 }
 .dark .vp2fa-tool-btn {
+  background: var(--vp-c-bg-soft, #161b22);
   border-color: var(--vp-c-divider, #30363d);
   color: var(--vp-c-text-2, #8b949e);
 }
@@ -239,10 +242,47 @@
 .vp2fa-tool-btn.danger:hover {
   border-color: var(--vp-c-red-1, #f85149);
   color: var(--vp-c-red-1, #f85149);
-  background-color: rgba(248, 81, 73, 0.06);
 }
 
-/* 导入弹窗 */
+/* ===== 空状态 ===== */
+.vp2fa-empty {
+  text-align: center;
+  padding: 32px 16px;
+  border: 1px dashed var(--vp-c-divider, #d0d7de);
+  border-radius: 12px;
+  color: var(--vp-c-text-3, #8b949e);
+  font-size: 14px;
+}
+
+/* ===== Toast 提示 ===== */
+.vp2fa-toast {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%) translateY(20px);
+  padding: 8px 18px;
+  border-radius: 8px;
+  background: var(--vp-c-brand-1, #58a6ff);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 500;
+  z-index: 9999;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.25s, transform 0.25s;
+}
+.vp2fa-toast.show {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0);
+}
+.vp2fa-toast.error {
+  background: var(--vp-c-red-1, #f85149);
+}
+.vp2fa-toast.success {
+  background: var(--vp-c-green-1, #2ea043);
+}
+
+/* ===== 导入弹窗 ===== */
 .vp2fa-modal-overlay {
   display: none;
   position: fixed;
@@ -308,16 +348,13 @@
   display: flex;
   gap: 8px;
 }
-.vp2fa-modal-actions button {
+.vp2fa-btn-confirm {
   flex: 1;
   padding: 8px 12px;
   font-size: 13px;
   font-weight: 500;
   border-radius: 6px;
   cursor: pointer;
-  transition: all 0.2s ease;
-}
-.vp2fa-btn-confirm {
   border: 1px solid var(--vp-c-brand-1, #58a6ff);
   background: var(--vp-c-brand-1, #58a6ff);
   color: #fff;
@@ -326,6 +363,12 @@
   opacity: 0.9;
 }
 .vp2fa-btn-cancel {
+  flex: 1;
+  padding: 8px 12px;
+  font-size: 13px;
+  font-weight: 500;
+  border-radius: 6px;
+  cursor: pointer;
   border: 1px solid var(--vp-c-divider, #d0d7de);
   background: transparent;
   color: var(--vp-c-text-2, #57606a);
@@ -341,44 +384,7 @@
   background: var(--vp-c-bg-mute, #21262d);
 }
 
-/* 空状态 */
-.vp2fa-empty {
-  text-align: center;
-  padding: 32px 16px;
-  border: 1px dashed var(--vp-c-divider, #d0d7de);
-  border-radius: 12px;
-  color: var(--vp-c-text-3, #8b949e);
-  font-size: 14px;
-}
-
-/* Toast */
-.vp2fa-toast {
-  position: fixed;
-  bottom: 24px;
-  left: 50%;
-  transform: translateX(-50%) translateY(20px);
-  padding: 8px 18px;
-  border-radius: 8px;
-  background: var(--vp-c-brand-1, #58a6ff);
-  color: #fff;
-  font-size: 13px;
-  font-weight: 500;
-  z-index: 9999;
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 0.25s, transform 0.25s;
-}
-.vp2fa-toast.show {
-  opacity: 1;
-  transform: translateX(-50%) translateY(0);
-}
-.vp2fa-toast.error {
-  background: var(--vp-c-red-1, #f85149);
-}
-.vp2fa-toast.success {
-  background: var(--vp-c-green-1, #2ea043);
-}
-
+/* ===== 响应式 ===== */
 @media (max-width: 480px) {
   .vp2fa-input-group {
     grid-template-columns: 1fr;
@@ -386,34 +392,32 @@
   .vp2fa-tools {
     flex-direction: column;
   }
+  .vp2fa-code {
+    font-size: 20px;
+  }
 }
 </style>
 
-<!-- HTML 结构 -->
+<!-- ============================================================
+     HTML 结构（无 onclick，避免 VitePress MD 渲染为源码）
+     ============================================================ -->
 <div class="vp2fa-root">
+  <!-- 账号列表容器 -->
   <div id="vp2faList"></div>
 
+  <!-- 添加账号表单 -->
   <div class="vp2fa-form">
     <div class="vp2fa-input-group">
       <input id="vp2faLabel" class="vp2fa-input" placeholder="账号名（如：GitHub）">
       <input id="vp2faSecret" class="vp2fa-input" placeholder="密钥（任意字符均可）">
     </div>
-    <button class="vp2fa-add-btn" onclick="window.vp2faAdd()">+ 添加账号</button>
+    <button class="vp2fa-add-btn" id="vp2faAddBtn">+ 添加账号</button>
 
-    <!-- 工具按钮 -->
+    <!-- 工具按钮（使用 addEventListener 绑定，不会变源码） -->
     <div class="vp2fa-tools">
-      <button class="vp2fa-tool-btn" onclick="window.vp2faExport()">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zM6 20V4h7v5h5v11H6z"/><path d="M8 13h8v2H8zm0 3h5v2H8z"/></svg>
-        导出配置
-      </button>
-      <button class="vp2fa-tool-btn" onclick="window.vp2faShowImport()">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6zM6 20V4h7v5h5v11H6z"/><path d="M8 13h8v2H8zm0 3h5v2H8z"/></svg>
-        导入配置
-      </button>
-      <button class="vp2fa-tool-btn danger" onclick="window.vp2faClearAll()">
-        <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
-        清空全部
-      </button>
+      <button class="vp2fa-tool-btn" id="vp2faExportBtn">📤 导出配置</button>
+      <button class="vp2fa-tool-btn" id="vp2faImportBtn">📥 导入配置</button>
+      <button class="vp2fa-tool-btn danger" id="vp2faClearBtn">🗑️ 清空全部</button>
     </div>
   </div>
 </div>
@@ -425,20 +429,23 @@
     <p>粘贴之前导出的 JSON 配置：</p>
     <textarea id="vp2faImportData" placeholder='[{"label":"GitHub","secret":"JBSWY3DPEHPK3PXP"}]'></textarea>
     <div class="vp2fa-modal-actions">
-      <button class="vp2fa-btn-confirm" onclick="window.vp2faImport()">确认导入</button>
-      <button class="vp2fa-btn-cancel" onclick="window.vp2faHideImport()">取消</button>
+      <button class="vp2fa-btn-confirm" id="vp2faImportConfirm">确认导入</button>
+      <button class="vp2fa-btn-cancel" id="vp2faImportCancel">取消</button>
     </div>
   </div>
 </div>
 
+<!-- ============================================================
+     JavaScript（全部用 addEventListener，兼容 VP SSR + GH Pages）
+     ============================================================ -->
 <script>
 if (typeof window !== 'undefined') {
   const VP2FA_KEY = 'vp2fa_accounts';
   const PERIOD = 30;
-  const CIRCLE_RADIUS = 16;
-  const CIRCUMFERENCE = 2 * Math.PI * CIRCLE_RADIUS;
+  const CIRCLE_RADIUS = 16; // 对应 40x40 svg
+  const CIRCUMFERENCE = 2 * Math.PI * CIRCLE_RADIUS; // ≈ 100.53
 
-  /* ---------- Base32 解码（容错，跳过非法字符） ---------- */
+  /* ---------- Base32 解码（容错：跳过非法字符） ---------- */
   function base32Decode(str) {
     const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
     str = str.replace(/=+$/, '').toUpperCase().replace(/\s/g, '');
@@ -479,7 +486,7 @@ if (typeof window !== 'undefined') {
     return code.toString().padStart(6, '0');
   }
 
-  /* ---------- 解析 otpauth:// ---------- */
+  /* ---------- 解析 otpauth:// 链接 ---------- */
   function parseOtpAuth(uri) {
     try {
       const url = new URL(uri);
@@ -489,7 +496,16 @@ if (typeof window !== 'undefined') {
         label: decodeURIComponent(url.pathname.split('/')[1] || '未命名账号'),
         secret: params.get('secret')
       };
-    } catch { return null; }
+    } catch {
+      return null;
+    }
+  }
+
+  /* ---------- HTML 转义（防 XSS） ---------- */
+  function esc(s) {
+    const d = document.createElement('div');
+    d.textContent = s;
+    return d.innerHTML;
   }
 
   /* ---------- Toast 提示 ---------- */
@@ -505,7 +521,7 @@ if (typeof window !== 'undefined') {
     setTimeout(() => { t.className = 'vp2fa-toast'; }, 2000);
   }
 
-  /* ---------- 渲染列表 ---------- */
+  /* ---------- 渲染账号列表 ---------- */
   async function renderList() {
     const list = document.getElementById('vp2faList');
     if (!list) return;
@@ -542,10 +558,10 @@ if (typeof window !== 'undefined') {
             </svg>
             <span class="vp2fa-timer-text">${remaining}</span>
           </div>
-          <button class="vp2fa-btn" onclick="window.vp2faCopy('${code}')" title="复制">
+          <button class="vp2fa-btn" data-action="copy" data-code="${code}" title="复制">
             <svg viewBox="0 0 24 24"><path fill="currentColor" d="M16 1H4a2 2 0 0 0-2 2v14h2V3h12V1zm3 4H8a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h11a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2zm0 16H8V7h11v14z"/></svg>
           </button>
-          <button class="vp2fa-btn delete" onclick="window.vp2faDelete('${acc.id}')" title="删除">
+          <button class="vp2fa-btn delete" data-action="delete" data-id="${acc.id}" title="删除">
             <svg viewBox="0 0 24 24"><path fill="currentColor" d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
           </button>
         </div>
@@ -555,7 +571,7 @@ if (typeof window !== 'undefined') {
   }
 
   /* ---------- 添加账号 ---------- */
-  window.vp2faAdd = function() {
+  function addAccount() {
     const labelInput = document.getElementById('vp2faLabel');
     const secretInput = document.getElementById('vp2faSecret');
     let label = labelInput.value.trim();
@@ -579,22 +595,23 @@ if (typeof window !== 'undefined') {
     secretInput.value = '';
     renderList();
     showToast('已添加：' + label, 'success');
-  };
+  }
 
   /* ---------- 删除账号 ---------- */
-  window.vp2faDelete = function(id) {
+  function deleteAccount(id) {
     const accounts = JSON.parse(localStorage.getItem(VP2FA_KEY) || '[]');
     const target = accounts.find(a => a.id === id);
     localStorage.setItem(VP2FA_KEY, JSON.stringify(accounts.filter(a => a.id !== id)));
     renderList();
     if (target) showToast('已删除：' + target.label);
-  };
+  }
 
   /* ---------- 复制验证码 ---------- */
-  window.vp2faCopy = function(code) {
+  function copyCode(code) {
     navigator.clipboard.writeText(code).then(() => {
       showToast('已复制：' + code, 'success');
     }).catch(() => {
+      // fallback
       const ta = document.createElement('textarea');
       ta.value = code;
       document.body.appendChild(ta);
@@ -603,10 +620,10 @@ if (typeof window !== 'undefined') {
       document.body.removeChild(ta);
       showToast('已复制：' + code, 'success');
     });
-  };
+  }
 
   /* ---------- 导出配置 ---------- */
-  window.vp2faExport = function() {
+  function exportConfig() {
     const accounts = JSON.parse(localStorage.getItem(VP2FA_KEY) || '[]');
     if (accounts.length === 0) { showToast('没有可导出的账号', 'error'); return; }
     const data = JSON.stringify(accounts.map(a => ({ label: a.label, secret: a.secret })), null, 2);
@@ -623,25 +640,26 @@ if (typeof window !== 'undefined') {
       URL.revokeObjectURL(url);
       showToast('配置已下载', 'success');
     });
-  };
+  }
 
   /* ---------- 导入弹窗控制 ---------- */
-  window.vp2faShowImport = function() {
+  function showImportModal() {
     document.getElementById('vp2faImportModal').classList.add('active');
-  };
-  window.vp2faHideImport = function() {
+  }
+  function hideImportModal() {
     document.getElementById('vp2faImportModal').classList.remove('active');
     document.getElementById('vp2faImportData').value = '';
-  };
+  }
 
   /* ---------- 导入配置 ---------- */
-  window.vp2faImport = function() {
+  function importConfig() {
     const raw = document.getElementById('vp2faImportData').value.trim();
     if (!raw) { showToast('请粘贴配置数据', 'error'); return; }
     try {
       const imported = JSON.parse(raw);
       if (!Array.isArray(imported)) throw new Error('格式错误');
       const accounts = JSON.parse(localStorage.getItem(VP2FA_KEY) || '[]');
+      let count = 0;
       for (const item of imported) {
         if (!item.secret) continue;
         accounts.push({
@@ -649,18 +667,19 @@ if (typeof window !== 'undefined') {
           label: item.label || '未命名账号',
           secret: item.secret.replace(/\s/g, '')
         });
+        count++;
       }
       localStorage.setItem(VP2FA_KEY, JSON.stringify(accounts));
       renderList();
-      window.vp2faHideImport();
-      showToast('成功导入 ' + imported.length + ' 个账号', 'success');
+      hideImportModal();
+      showToast('成功导入 ' + count + ' 个账号', 'success');
     } catch (e) {
       showToast('导入失败：JSON 格式错误', 'error');
     }
-  };
+  }
 
   /* ---------- 清空全部 ---------- */
-  window.vp2faClearAll = function() {
+  function clearAll() {
     const accounts = JSON.parse(localStorage.getItem(VP2FA_KEY) || '[]');
     if (accounts.length === 0) { showToast('没有账号可清除', 'error'); return; }
     if (confirm('确定删除全部 ' + accounts.length + ' 个账号？此操作不可恢复！')) {
@@ -668,16 +687,37 @@ if (typeof window !== 'undefined') {
       renderList();
       showToast('已全部清除', 'success');
     }
-  };
-
-  /* ---------- HTML 转义 ---------- */
-  function esc(s) {
-    const d = document.createElement('div');
-    d.textContent = s;
-    return d.innerHTML;
   }
 
-  /* ---------- 初始化 ---------- */
+  /* ===== DOM 事件绑定（不用 onclick，避免 MD 渲染为源码）===== */
+
+  // 委托列表区域的按钮点击（复制 / 删除）
+  document.getElementById('vp2faList').addEventListener('click', function(e) {
+    const btn = e.target.closest('.vp2fa-btn');
+    if (!btn) return;
+    const action = btn.dataset.action;
+    if (action === 'copy') copyCode(btn.dataset.code);
+    if (action === 'delete') deleteAccount(btn.dataset.id);
+  });
+
+  // 添加按钮
+  document.getElementById('vp2faAddBtn').addEventListener('click', addAccount);
+
+  // 工具按钮
+  document.getElementById('vp2faExportBtn').addEventListener('click', exportConfig);
+  document.getElementById('vp2faImportBtn').addEventListener('click', showImportModal);
+  document.getElementById('vp2faClearBtn').addEventListener('click', clearAll);
+
+  // 导入弹窗按钮
+  document.getElementById('vp2faImportConfirm').addEventListener('click', importConfig);
+  document.getElementById('vp2faImportCancel').addEventListener('click', hideImportModal);
+
+  // 支持回车提交
+  document.getElementById('vp2faSecret').addEventListener('keydown', function(e) {
+    if (e.key === 'Enter') addAccount();
+  });
+
+  /* ===== 初始化 ===== */
   requestAnimationFrame(() => {
     renderList();
     setInterval(renderList, 1000);
