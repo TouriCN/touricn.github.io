@@ -1,6 +1,5 @@
 # 2FA验证码密钥工具
 
-<ClientOnly>
 <div class="vp2fa-root">
   <div id="vp2faList"></div>
   <div class="vp2fa-form">
@@ -16,7 +15,6 @@
     </div>
   </div>
 </div>
-</ClientOnly>
 
 ## 该工具有什么用处？
 仅使用网页端，方便快捷使用；只需要输入账号名和需要使用的账户2FA密钥，即可生成对应的2FA验证码，避免找不到验证器应用时无法登录账户。
@@ -108,7 +106,7 @@
 .vp2fa-tool-btn:hover { border-color: #58a6ff; color: #58a6ff; }
 .vp2fa-tool-btn.danger:hover { border-color: #f85149; color: #f85149; }
 
-/* 暗色模式原生适配，100%生效 */
+/* 暗色模式原生适配 */
 @media (prefers-color-scheme: dark) {
   .vp2fa-card { background: #161b22; border-color: #30363d; }
   .vp2fa-label { color: #8b949e; }
@@ -124,7 +122,6 @@
   .vp2fa-tool-btn:hover { border-color: #58a6ff; color: #58a6ff; }
 }
 
-/* 移动端适配 */
 @media (max-width: 640px) {
   .vp2fa-input-grid { grid-template-columns: 1fr; }
   .vp2fa-code { font-size: 20px; }
@@ -140,7 +137,6 @@ const PERIOD = 30
 const CIRCLE_RADIUS = 16
 const CIRCUMFERENCE = 2 * Math.PI * CIRCLE_RADIUS
 
-// Base32解码（容错，跳过非法字符）
 const base32Decode = (str) => {
   const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567'
   str = str.replace(/=+$/, '').toUpperCase().replace(/\s/g, '')
@@ -156,7 +152,6 @@ const base32Decode = (str) => {
   return new Uint8Array(bytes)
 }
 
-// HMAC-SHA1
 const hmacSha1 = async (key, data) => {
   const cryptoKey = await crypto.subtle.importKey(
     'raw', key, { name: 'HMAC', hash: 'SHA-1' }, false, ['sign']
@@ -164,7 +159,6 @@ const hmacSha1 = async (key, data) => {
   return new Uint8Array(await crypto.subtle.sign('HMAC', cryptoKey, data))
 }
 
-// 生成TOTP
 const generateTotp = async (secret) => {
   const key = base32Decode(secret)
   const counter = Math.floor(Date.now() / 1000 / PERIOD)
@@ -181,7 +175,6 @@ const generateTotp = async (secret) => {
   return code.toString().padStart(6, '0')
 }
 
-// 解析otpauth链接
 const parseOtpAuth = (uri) => {
   try {
     const url = new URL(uri)
@@ -194,7 +187,6 @@ const parseOtpAuth = (uri) => {
   } catch { return null }
 }
 
-// 渲染账号列表
 const renderList = async () => {
   const list = document.getElementById('vp2faList')
   if (!list) return
@@ -214,22 +206,28 @@ const renderList = async () => {
       </div>
       <div class="vp2fa-actions">
         <div class="vp2fa-timer ${remaining <=5 ? 'warn' : ''} ${remaining <=0 ? 'expired' : ''}">
-          <svg viewBox="0 0 40 40">
-            <circle class="bg" cx="20" cy="20" r="${CIRCLE_RADIUS}"/>
-            <circle class="progress" cx="20" cy="20" r="${CIRCLE_RADIUS}"
-              stroke-dasharray="${CIRCUMFERENCE}" stroke-dashoffset="${offset}"/>
-          </svg>
+          <circle class="bg" cx="20" cy="20" r="${CIRCLE_RADIUS}"/>
+          <circle class="progress" cx="20" cy="20" r="${CIRCLE_RADIUS}"
+            stroke-dasharray="${CIRCUMFERENCE}" stroke-dashoffset="${offset}"/>
           <span class="vp2fa-timer-text">${remaining}</span>
         </div>
         <button class="vp2fa-btn" data-action="copy" data-code="${code}">📋</button>
         <button class="vp2fa-btn delete" data-action="delete" data-id="${acc.id}">🗑️</button>
       </div>
     `
+    // 补SVG命名空间，避免渲染异常
+    card.querySelector('.vp2fa-timer').innerHTML = `
+      <svg viewBox="0 0 40 40">
+        <circle class="bg" cx="20" cy="20" r="${CIRCLE_RADIUS}"/>
+        <circle class="progress" cx="20" cy="20" r="${CIRCLE_RADIUS}"
+          stroke-dasharray="${CIRCUMFERENCE}" stroke-dashoffset="${offset}"/>
+      </svg>
+      <span class="vp2fa-timer-text">${remaining}</span>
+    `
     list.appendChild(card)
   }
 }
 
-// 事件委托
 document.getElementById('vp2faList').addEventListener('click', (e) => {
   const btn = e.target.closest('.vp2fa-btn')
   if (!btn) return
@@ -244,7 +242,6 @@ document.getElementById('vp2faList').addEventListener('click', (e) => {
   }
 })
 
-// 添加账号
 document.getElementById('vp2faAddBtn').addEventListener('click', () => {
   const labelInput = document.getElementById('vp2faLabel')
   const secretInput = document.getElementById('vp2faSecret')
@@ -266,14 +263,12 @@ document.getElementById('vp2faAddBtn').addEventListener('click', () => {
   renderList()
 })
 
-// 导出配置
 document.getElementById('vp2faExportBtn').addEventListener('click', () => {
   const data = JSON.stringify(JSON.parse(localStorage.getItem(STORAGE_KEY) || []), null, 2)
   navigator.clipboard.writeText(data)
   showToast('配置已复制到剪贴板')
 })
 
-// 导入配置
 document.getElementById('vp2faImportBtn').addEventListener('click', () => {
   const raw = prompt('请粘贴之前导出的 JSON 配置：')
   if (!raw) return
@@ -298,7 +293,6 @@ document.getElementById('vp2faImportBtn').addEventListener('click', () => {
   }
 })
 
-// 清空全部
 document.getElementById('vp2faClearBtn').addEventListener('click', () => {
   if (confirm('确定要清空所有账号吗？此操作不可恢复。')) {
     localStorage.removeItem(STORAGE_KEY)
@@ -306,7 +300,6 @@ document.getElementById('vp2faClearBtn').addEventListener('click', () => {
   }
 })
 
-// Toast提示
 const showToast = (msg) => {
   const toast = document.createElement('div')
   toast.textContent = msg
@@ -320,7 +313,6 @@ const showToast = (msg) => {
   setTimeout(() => toast.remove(), 1500)
 }
 
-// 初始化+定时刷新
 onMounted(() => {
   renderList()
   setInterval(renderList, 1000)
