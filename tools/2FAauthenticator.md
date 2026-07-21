@@ -1,13 +1,12 @@
 # 2FA验证码密钥工具
 
 <div class="vp2fa-root">
-  <!-- 列表容器：无账号时自动显示空状态提示 -->
   <div id="vp2faList"></div>
 
   <div class="vp2fa-form">
     <div class="vp2fa-input-grid">
       <input id="vp2faLabel" class="vp2fa-input" placeholder="账号名（如：GitHub）">
-      <input id="vp2faSecret" class="vp2fa-input" placeholder="密钥（任意字符均可）">
+      <input id="vp2faSecret" class="vp2fa-input" placeholder="密钥（Base32格式，至少16位，如JBSWY3DPEHPK3PXP）">
     </div>
     <button id="vp2faAddBtn" class="vp2fa-add-btn">+ 添加账号</button>
     <div class="vp2fa-tools">
@@ -28,8 +27,10 @@
 .vp2fa-root { margin: 1.5rem 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
 .vp2fa-card { display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; margin-bottom: 10px; background: #f6f8fa; border: 1px solid #d0d7de; border-radius: 12px; transition: border-color 0.2s; }
 .vp2fa-card:hover { border-color: #58a6ff; }
+.vp2fa-card.error { border-color: #f85149; background: #fff0f0; }
 .vp2fa-label { display: block; font-size: 13px; color: #57606a; margin-bottom: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .vp2fa-code { display: block; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 24px; font-weight: 600; letter-spacing: 2px; color: #1f2328; }
+.vp2fa-error-text { color: #f85149; font-size: 12px; margin-top: 4px; }
 .vp2fa-actions { display: flex; gap: 8px; margin-left: 16px; }
 .vp2fa-timer { position: relative; width: 40px; height: 40px; }
 .vp2fa-timer svg { transform: rotate(-90deg); width: 100%; height: 100%; }
@@ -52,19 +53,15 @@
 .vp2fa-tool-btn:hover { border-color: #58a6ff; color: #58a6ff; }
 .vp2fa-tool-btn.danger:hover { border-color: #f85149; color: #f85149; }
 
-/* 空状态样式：无账号时显示 */
 .vp2fa-empty {
-  color: #8b949e;
-  font-size: 14px;
-  padding: 32px 0;
-  text-align: center;
-  border-radius: 12px;
-  background: #f6f8fa;
+  color: #8b949e; font-size: 14px; padding: 32px 0;
+  text-align: center; border-radius: 12px; background: #f6f8fa;
   border: 1px dashed #d0d7de;
 }
 
 @media (prefers-color-scheme: dark) {
   .vp2fa-card { background: #161b22; border-color: #30363d; }
+  .vp2fa-card.error { background: #2d161b; border-color: #f85149; }
   .vp2fa-label { color: #8b949e; }
   .vp2fa-code { color: #e6edf3; }
   .vp2fa-timer .bg { stroke: #30363d; }
@@ -93,35 +90,53 @@ const STORAGE_KEY = 'vp2fa_accounts'
 const PERIOD = 30
 const CIRCLE_RADIUS = 16
 const CIRCUMFERENCE = 2 * Math.PI * CIRCLE_RADIUS
+const MIN_SECRET_BYTES = 10 // TOTP最低要求：80位（10字节）
 
+// ===== 严格Base32解码（返回null表示无效）=====
 const base32Decode = (str) => {
   const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567'
+  // 过滤填充符、空格，转大写
   str = str.replace(/=+$/, '').toUpperCase().replace(/\s/g, '')
+  // 空字符串直接返回无效
+  if (!str) return null
+  
   let bits = '', bytes = []
   for (let i = 0; i < str.length; i++) {
     const val = alphabet.indexOf(str[i])
-    if (val === -1) continue
+    // 遇到非Base32字符直接返回无效
+    if (val === -1) return null
     bits += val.toString(2).padStart(5, '0')
   }
+  
+  // 至少要有8位二进制才能解码出1个字节
+  if (bits.length < 8) return null
   for (let i = 0; i < bits.length - 7; i += 8) {
     bytes.push(parseInt(bits.substr(i, 8), 2))
   }
-  return new Uint8Array(bytes)
+  
+  const result = new Uint8Array(bytes)
+  // 校验长度是否满足TOTP最低要求
+  return result.length >= MIN_SECRET_BYTES ? result : null
 }
 
-const hmacSha1 = async (key, data) => {
+// ===== HMAC-SHA1 =====
+const createHmacSigner = async (key) => {
   const cryptoKey = await crypto.subtle.importKey(
     'raw', key, { name: 'HMAC', hash: 'SHA-1' }, false, ['sign']
   )
-  return new Uint8Array(await crypto.subtle.sign('HMAC', cryptoKey, data))
+  return (data) => crypto.subtle.sign('HMAC', cryptoKey, data)
 }
 
+// ===== 生成TOTP =====
 const generateTotp = async (secret) => {
   const key = base32Decode(secret)
+  if (!key) throw new Error('无效密钥')
+  
+  const sign = await createHmacSigner(key)
   const counter = Math.floor(Date.now() / 1000 / PERIOD)
   const buffer = new ArrayBuffer(8)
   new DataView(buffer).setUint32(4, counter, false)
-  const hs = await hmacSha1(key, buffer)
+  const hs = new Uint8Array(await sign(buffer))
   const offset = hs[hs.length - 1] & 0x0F
   const code = (
     ((hs[offset] & 0x7F) << 24) |
@@ -132,6 +147,7 @@ const generateTotp = async (secret) => {
   return code.toString().padStart(6, '0')
 }
 
+// ===== 解析 otpauth:// 链接 =====
 const parseOtpAuth = (uri) => {
   try {
     const url = new URL(uri)
@@ -144,7 +160,15 @@ const parseOtpAuth = (uri) => {
   } catch { return null }
 }
 
-// 渲染账号列表：无账号时显示空状态，有账号时显示卡片
+// ===== 严格校验密钥（添加/导入时调用）=====
+const isValidSecret = (secret) => {
+  const decoded = base32Decode(secret)
+  return decoded !== null
+}
+
+// ===== 渲染列表（错误隔离，不刷屏）=====
+let renderErrorCache = new Set()
+
 const renderList = async () => {
   const list = document.getElementById('vp2faList')
   if (!list) return
@@ -153,41 +177,74 @@ const renderList = async () => {
   const remaining = PERIOD - Math.floor(Date.now() / 1000) % PERIOD
   const offset = CIRCUMFERENCE * (remaining / PERIOD)
 
-  // 无账号时显示空状态提示
   if (accounts.length === 0) {
     list.innerHTML = `<div class="vp2fa-empty">暂无账号，点击下方按钮添加你的第一个2FA验证码</div>`
+    renderErrorCache.clear()
     return
   }
 
-  // 有账号时生成所有卡片，一次性插入DOM
   const cardPromises = accounts.map(async (acc) => {
-    const code = await generateTotp(acc.secret)
-    return `
-      <div class="vp2fa-card">
-        <div class="vp2fa-info">
-          <span class="vp2fa-label">${acc.label}</span>
-          <span class="vp2fa-code">${code.slice(0,3)} ${code.slice(3)}</span>
-        </div>
-        <div class="vp2fa-actions">
-          <div class="vp2fa-timer ${remaining <=5 ? 'warn' : ''} ${remaining <=0 ? 'expired' : ''}">
-            <svg viewBox="0 0 40 40">
-              <circle class="bg" cx="20" cy="20" r="${CIRCLE_RADIUS}"/>
-              <circle class="progress" cx="20" cy="20" r="${CIRCLE_RADIUS}"
-                stroke-dasharray="${CIRCUMFERENCE}" stroke-dashoffset="${offset}"/>
-            </svg>
-            <span class="vp2fa-timer-text">${remaining}</span>
+    // 已报过错的账号直接显示错误卡片，不再重复执行逻辑
+    if (renderErrorCache.has(acc.id)) {
+      return `
+        <div class="vp2fa-card error">
+          <div class="vp2fa-info">
+            <span class="vp2fa-label">${acc.label}（密钥无效）</span>
+            <span class="vp2fa-code">------</span>
+            <div class="vp2fa-error-text">密钥不符合TOTP规范，请删除后重新添加</div>
           </div>
-          <button class="vp2fa-btn" data-action="copy" data-code="${code}">📋</button>
-          <button class="vp2fa-btn delete" data-action="delete" data-id="${acc.id}">🗑️</button>
+          <div class="vp2fa-actions">
+            <button class="vp2fa-btn delete" data-action="delete" data-id="${acc.id}">🗑️</button>
+          </div>
         </div>
-      </div>
-    `
+      `
+    }
+
+    try {
+      const code = await generateTotp(acc.secret)
+      return `
+        <div class="vp2fa-card">
+          <div class="vp2fa-info">
+            <span class="vp2fa-label">${acc.label}</span>
+            <span class="vp2fa-code">${code.slice(0,3)} ${code.slice(3)}</span>
+          </div>
+          <div class="vp2fa-actions">
+            <div class="vp2fa-timer ${remaining <=5 ? 'warn' : ''} ${remaining <=0 ? 'expired' : ''}">
+              <svg viewBox="0 0 40 40">
+                <circle class="bg" cx="20" cy="20" r="${CIRCLE_RADIUS}"/>
+                <circle class="progress" cx="20" cy="20" r="${CIRCLE_RADIUS}"
+                  stroke-dasharray="${CIRCUMFERENCE}" stroke-dashoffset="${offset}"/>
+              </svg>
+              <span class="vp2fa-timer-text">${remaining}</span>
+            </div>
+            <button class="vp2fa-btn" data-action="copy" data-code="${code}">📋</button>
+            <button class="vp2fa-btn delete" data-action="delete" data-id="${acc.id}">🗑️</button>
+          </div>
+        </div>
+      `
+    } catch (err) {
+      renderErrorCache.add(acc.id)
+      console.warn(`[2FA] 账号「${acc.label}」密钥无效`)
+      return `
+        <div class="vp2fa-card error">
+          <div class="vp2fa-info">
+            <span class="vp2fa-label">${acc.label}（密钥无效）</span>
+            <span class="vp2fa-code">------</span>
+            <div class="vp2fa-error-text">密钥不符合TOTP规范，请删除后重新添加</div>
+          </div>
+          <div class="vp2fa-actions">
+            <button class="vp2fa-btn delete" data-action="delete" data-id="${acc.id}">🗑️</button>
+          </div>
+        </div>
+      `
+    }
   })
 
   const cardsHtml = await Promise.all(cardPromises)
   list.innerHTML = cardsHtml.join('')
 }
 
+// ===== Toast 提示 =====
 const showToast = (msg) => {
   const toast = document.createElement('div')
   toast.textContent = msg
@@ -201,10 +258,11 @@ const showToast = (msg) => {
   setTimeout(() => toast.remove(), 1500)
 }
 
+// ===== 事件绑定 =====
 onMounted(async () => {
   await nextTick()
 
-  // 列表点击委托：复制/删除账号
+  // 列表点击委托
   document.getElementById('vp2faList').addEventListener('click', (e) => {
     const btn = e.target.closest('.vp2fa-btn')
     if (!btn) return
@@ -215,20 +273,46 @@ onMounted(async () => {
     if (btn.dataset.action === 'delete') {
       const accounts = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]')
       localStorage.setItem(STORAGE_KEY, JSON.stringify(accounts.filter(a => a.id !== btn.dataset.id)))
+      renderErrorCache.delete(btn.dataset.id)
       renderList()
     }
   })
 
-  // 添加账号
+  // 添加账号（严格校验）
   document.getElementById('vp2faAddBtn').addEventListener('click', () => {
     const labelInput = document.getElementById('vp2faLabel')
     const secretInput = document.getElementById('vp2faSecret')
     const label = labelInput.value.trim()
     const input = secretInput.value.trim()
-    if (!input) return alert('请输入密钥')
+    
+    if (!input) {
+      alert('请输入2FA密钥')
+      return
+    }
 
+    // 解析otpauth链接
     const parsed = parseOtpAuth(input)
     const secret = parsed ? parsed.secret : input
+
+    // 严格校验密钥
+    if (!isValidSecret(secret)) {
+      alert(`密钥格式无效！
+      
+✅ 正确要求：
+1. 仅包含Base32合法字符（A-Z、2-7，不区分大小写）
+2. 长度至少16位
+3. 可从服务商获取的二维码/密钥文本复制
+
+❌ 常见错误：
+- 包含1、8、9、0等非法字符
+- 长度不足16位
+- 误输入中文或特殊符号
+
+示例：JBSWY3DPEHPK3PXP`)
+      secretInput.focus()
+      return
+    }
+
     const accounts = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]')
     accounts.push({
       id: Date.now().toString(36),
@@ -236,9 +320,11 @@ onMounted(async () => {
       secret
     })
     localStorage.setItem(STORAGE_KEY, JSON.stringify(accounts))
+
     labelInput.value = ''
     secretInput.value = ''
     renderList()
+    showToast('账号添加成功')
   })
 
   // 导出配置
@@ -248,7 +334,7 @@ onMounted(async () => {
     showToast('配置已复制到剪贴板')
   })
 
-  // 导入配置
+  // 导入配置（严格校验）
   document.getElementById('vp2faImportBtn').addEventListener('click', () => {
     const raw = prompt('请粘贴之前导出的 JSON 配置：')
     if (!raw) return
@@ -256,18 +342,26 @@ onMounted(async () => {
       const imported = JSON.parse(raw)
       if (!Array.isArray(imported)) throw new Error()
       const accounts = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]')
+      let added = 0, invalid = 0
       imported.forEach(item => {
         if (item.label && item.secret) {
-          accounts.push({
-            id: Date.now().toString(36) + Math.random().toString(36).slice(2),
-            label: item.label,
-            secret: item.secret
-          })
+          if (isValidSecret(item.secret)) {
+            accounts.push({
+              id: Date.now().toString(36) + Math.random().toString(36).slice(2),
+              label: item.label,
+              secret: item.secret
+            })
+            added++
+          } else {
+            invalid++
+          }
         }
       })
       localStorage.setItem(STORAGE_KEY, JSON.stringify(accounts))
       renderList()
-      alert('导入成功')
+      alert(`导入完成：
+✅ 成功添加 ${added} 个有效账号
+❌ 过滤 ${invalid} 个无效密钥`)
     } catch {
       alert('JSON 格式错误，导入失败')
     }
@@ -277,11 +371,12 @@ onMounted(async () => {
   document.getElementById('vp2faClearBtn').addEventListener('click', () => {
     if (confirm('确定要清空所有账号吗？此操作不可恢复。')) {
       localStorage.removeItem(STORAGE_KEY)
+      renderErrorCache.clear()
       renderList()
     }
   })
 
-  // 初始化+每秒刷新倒计时
+  // 初始化 + 每秒刷新
   renderList()
   setInterval(renderList, 1000)
 })
