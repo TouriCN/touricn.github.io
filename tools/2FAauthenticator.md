@@ -1,7 +1,9 @@
 # 2FA验证码密钥工具
 
 <div class="vp2fa-root">
+  <!-- 初始为空，没加账号时什么都不显示，完全符合首次访问场景 -->
   <div id="vp2faList"></div>
+
   <div class="vp2fa-form">
     <div class="vp2fa-input-grid">
       <input id="vp2faLabel" class="vp2fa-input" placeholder="账号名（如：GitHub）">
@@ -23,90 +25,34 @@
 使用该工具极有可能会导致你的账户被盗！请尽量避免页面内容被他人看到，不要在不安全的设备上使用。
 
 <style>
-.vp2fa-root {
-  margin: 1.5rem 0;
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-}
-.vp2fa-card {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 12px 16px;
-  margin-bottom: 10px;
-  background: #f6f8fa;
-  border: 1px solid #d0d7de;
-  border-radius: 12px;
-  transition: border-color 0.2s;
-}
+/* 样式和之前完全一致，无改动 */
+.vp2fa-root { margin: 1.5rem 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+.vp2fa-card { display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; margin-bottom: 10px; background: #f6f8fa; border: 1px solid #d0d7de; border-radius: 12px; transition: border-color 0.2s; }
 .vp2fa-card:hover { border-color: #58a6ff; }
-.vp2fa-label {
-  display: block;
-  font-size: 13px;
-  color: #57606a;
-  margin-bottom: 4px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.vp2fa-code {
-  display: block;
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-  font-size: 24px;
-  font-weight: 600;
-  letter-spacing: 2px;
-  color: #1f2328;
-}
+.vp2fa-label { display: block; font-size: 13px; color: #57606a; margin-bottom: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.vp2fa-code { display: block; font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 24px; font-weight: 600; letter-spacing: 2px; color: #1f2328; }
 .vp2fa-actions { display: flex; gap: 8px; margin-left: 16px; }
 .vp2fa-timer { position: relative; width: 40px; height: 40px; }
 .vp2fa-timer svg { transform: rotate(-90deg); width: 100%; height: 100%; }
 .vp2fa-timer .bg { fill: none; stroke: #d0d7de; stroke-width: 3; }
-.vp2fa-timer .progress {
-  fill: none; stroke: #58a6ff; stroke-width: 3; stroke-linecap: round;
-  transition: stroke-dashoffset 0.5s linear;
-}
+.vp2fa-timer .progress { fill: none; stroke: #58a6ff; stroke-width: 3; stroke-linecap: round; transition: stroke-dashoffset 0.5s linear; }
 .vp2fa-timer.warn .progress { stroke: #d29922; }
 .vp2fa-timer.expired .progress { stroke: #f85149; }
-.vp2fa-timer-text {
-  position: absolute; top: 50%; left: 50%;
-  transform: translate(-50%, -50%);
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-  font-size: 12px; font-weight: 600; color: #1f2328;
-}
-.vp2fa-btn {
-  padding: 6px; border: none; background: transparent;
-  color: #57606a; cursor: pointer; border-radius: 6px;
-  display: inline-flex; align-items: center; justify-content: center;
-  transition: all 0.2s;
-}
-.vp2fa-btn:hover { color: #58a6ff; background: rgba(88,166,255,0.1); }
-.vp2fa-btn.delete:hover { color: #f85149; background: rgba(248,81,73,0.1); }
+.vp2fa-timer-text { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px; font-weight: 600; color: #1f2328; }
+.vp2fa-btn { padding: 6px; border: none; background: transparent; color: #57606a; cursor: pointer; border-radius: 6px; display: inline-flex; align-items: center; justify-content: center; transition: all 0.2s; }
+.vp2fa-btn:hover { color: #58a6ff; background: rgba(88, 166, 255, 0.1); }
+.vp2fa-btn.delete:hover { color: #f85149; background: rgba(248, 81, 73, 0.1); }
 .vp2fa-form { margin-top: 20px; padding-top: 20px; border-top: 1px dashed #d0d7de; }
 .vp2fa-input-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 10px; }
-.vp2fa-input {
-  width: 100%; padding: 10px 12px; font-size: 14px;
-  border: 1px solid #d0d7de; border-radius: 6px; background: #fff;
-  color: #1f2328; box-sizing: border-box;
-}
-.vp2fa-input:focus {
-  outline: none; border-color: #58a6ff;
-  box-shadow: 0 0 0 3px rgba(88,166,255,0.2);
-}
-.vp2fa-add-btn {
-  width: 100%; padding: 10px; font-size: 14px; font-weight: 500;
-  border: 1px dashed #d0d7de; border-radius: 6px; background: transparent;
-  color: #57606a; cursor: pointer; transition: all 0.2s;
-}
+.vp2fa-input { width: 100%; padding: 10px 12px; font-size: 14px; border: 1px solid #d0d7de; border-radius: 6px; background: #fff; color: #1f2328; box-sizing: border-box; }
+.vp2fa-input:focus { outline: none; border-color: #58a6ff; box-shadow: 0 0 0 3px rgba(88, 166, 255, 0.2); }
+.vp2fa-add-btn { width: 100%; padding: 10px; font-size: 14px; font-weight: 500; border: 1px dashed #d0d7de; border-radius: 6px; background: transparent; color: #57606a; cursor: pointer; transition: all 0.2s; }
 .vp2fa-add-btn:hover { border-color: #58a6ff; color: #58a6ff; }
 .vp2fa-tools { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
-.vp2fa-tool-btn {
-  padding: 6px 12px; font-size: 12px; border-radius: 6px;
-  border: 1px solid #d0d7de; background: #f6f8fa;
-  color: #57606a; cursor: pointer; transition: all 0.2s;
-}
+.vp2fa-tool-btn { padding: 6px 12px; font-size: 12px; border-radius: 6px; border: 1px solid #d0d7de; background: #f6f8fa; color: #57606a; cursor: pointer; transition: all 0.2s; }
 .vp2fa-tool-btn:hover { border-color: #58a6ff; color: #58a6ff; }
 .vp2fa-tool-btn.danger:hover { border-color: #f85149; color: #f85149; }
 
-/* 暗色模式原生适配 */
 @media (prefers-color-scheme: dark) {
   .vp2fa-card { background: #161b22; border-color: #30363d; }
   .vp2fa-label { color: #8b949e; }
@@ -130,13 +76,18 @@
 </style>
 
 <script setup>
-import { onMounted } from 'vue'
+import { onMounted, nextTick } from 'vue'
 
+// 🔴 核心：SSR阶段直接退出，绝对不碰浏览器API，从根源避免白屏
+if (import.meta.env.SSR) return
+
+// ======================= 配置常量 =======================
 const STORAGE_KEY = 'vp2fa_accounts'
 const PERIOD = 30
 const CIRCLE_RADIUS = 16
 const CIRCUMFERENCE = 2 * Math.PI * CIRCLE_RADIUS
 
+// ======================= 工具函数 =======================
 const base32Decode = (str) => {
   const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567'
   str = str.replace(/=+$/, '').toUpperCase().replace(/\s/g, '')
@@ -187,13 +138,15 @@ const parseOtpAuth = (uri) => {
   } catch { return null }
 }
 
+// ======================= 核心逻辑 =======================
 const renderList = async () => {
   const list = document.getElementById('vp2faList')
   if (!list) return
+
   const accounts = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]')
   const remaining = PERIOD - Math.floor(Date.now() / 1000) % PERIOD
   const offset = CIRCUMFERENCE * (remaining / PERIOD)
-  list.innerHTML = ''
+  list.innerHTML = '' // 没账号时这里就是空的，完全符合预期
 
   for (const acc of accounts) {
     const code = await generateTotp(acc.secret)
@@ -206,99 +159,20 @@ const renderList = async () => {
       </div>
       <div class="vp2fa-actions">
         <div class="vp2fa-timer ${remaining <=5 ? 'warn' : ''} ${remaining <=0 ? 'expired' : ''}">
-          <circle class="bg" cx="20" cy="20" r="${CIRCLE_RADIUS}"/>
-          <circle class="progress" cx="20" cy="20" r="${CIRCLE_RADIUS}"
-            stroke-dasharray="${CIRCUMFERENCE}" stroke-dashoffset="${offset}"/>
+          <svg viewBox="0 0 40 40">
+            <circle class="bg" cx="20" cy="20" r="${CIRCLE_RADIUS}"/>
+            <circle class="progress" cx="20" cy="20" r="${CIRCLE_RADIUS}"
+              stroke-dasharray="${CIRCUMFERENCE}" stroke-dashoffset="${offset}"/>
+          </svg>
           <span class="vp2fa-timer-text">${remaining}</span>
         </div>
         <button class="vp2fa-btn" data-action="copy" data-code="${code}">📋</button>
         <button class="vp2fa-btn delete" data-action="delete" data-id="${acc.id}">🗑️</button>
       </div>
     `
-    // 补SVG命名空间，避免渲染异常
-    card.querySelector('.vp2fa-timer').innerHTML = `
-      <svg viewBox="0 0 40 40">
-        <circle class="bg" cx="20" cy="20" r="${CIRCLE_RADIUS}"/>
-        <circle class="progress" cx="20" cy="20" r="${CIRCLE_RADIUS}"
-          stroke-dasharray="${CIRCUMFERENCE}" stroke-dashoffset="${offset}"/>
-      </svg>
-      <span class="vp2fa-timer-text">${remaining}</span>
-    `
     list.appendChild(card)
   }
 }
-
-document.getElementById('vp2faList').addEventListener('click', (e) => {
-  const btn = e.target.closest('.vp2fa-btn')
-  if (!btn) return
-  if (btn.dataset.action === 'copy') {
-    navigator.clipboard.writeText(btn.dataset.code)
-    showToast('验证码已复制')
-  }
-  if (btn.dataset.action === 'delete') {
-    const accounts = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]')
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(accounts.filter(a => a.id !== btn.dataset.id)))
-    renderList()
-  }
-})
-
-document.getElementById('vp2faAddBtn').addEventListener('click', () => {
-  const labelInput = document.getElementById('vp2faLabel')
-  const secretInput = document.getElementById('vp2faSecret')
-  const label = labelInput.value.trim()
-  const input = secretInput.value.trim()
-  if (!input) return alert('请输入密钥')
-
-  const parsed = parseOtpAuth(input)
-  const secret = parsed ? parsed.secret : input
-  const accounts = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]')
-  accounts.push({
-    id: Date.now().toString(36),
-    label: parsed?.label || label || '未命名账号',
-    secret
-  })
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(accounts))
-  labelInput.value = ''
-  secretInput.value = ''
-  renderList()
-})
-
-document.getElementById('vp2faExportBtn').addEventListener('click', () => {
-  const data = JSON.stringify(JSON.parse(localStorage.getItem(STORAGE_KEY) || []), null, 2)
-  navigator.clipboard.writeText(data)
-  showToast('配置已复制到剪贴板')
-})
-
-document.getElementById('vp2faImportBtn').addEventListener('click', () => {
-  const raw = prompt('请粘贴之前导出的 JSON 配置：')
-  if (!raw) return
-  try {
-    const imported = JSON.parse(raw)
-    if (!Array.isArray(imported)) throw new Error()
-    const accounts = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]')
-    imported.forEach(item => {
-      if (item.label && item.secret) {
-        accounts.push({
-          id: Date.now().toString(36) + Math.random().toString(36).slice(2),
-          label: item.label,
-          secret: item.secret
-        })
-      }
-    })
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(accounts))
-    renderList()
-    alert('导入成功')
-  } catch {
-    alert('JSON 格式错误，导入失败')
-  }
-})
-
-document.getElementById('vp2faClearBtn').addEventListener('click', () => {
-  if (confirm('确定要清空所有账号吗？此操作不可恢复。')) {
-    localStorage.removeItem(STORAGE_KEY)
-    renderList()
-  }
-})
 
 const showToast = (msg) => {
   const toast = document.createElement('div')
@@ -313,7 +187,88 @@ const showToast = (msg) => {
   setTimeout(() => toast.remove(), 1500)
 }
 
-onMounted(() => {
+// ======================= 事件绑定 =======================
+onMounted(async () => {
+  await nextTick() // 等DOM完全挂载，避免时序问题
+
+  // 列表点击委托
+  document.getElementById('vp2faList').addEventListener('click', (e) => {
+    const btn = e.target.closest('.vp2fa-btn')
+    if (!btn) return
+    if (btn.dataset.action === 'copy') {
+      navigator.clipboard.writeText(btn.dataset.code)
+      showToast('验证码已复制')
+    }
+    if (btn.dataset.action === 'delete') {
+      const accounts = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]')
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(accounts.filter(a => a.id !== btn.dataset.id)))
+      renderList()
+    }
+  })
+
+  // 添加账号
+  document.getElementById('vp2faAddBtn').addEventListener('click', () => {
+    const labelInput = document.getElementById('vp2faLabel')
+    const secretInput = document.getElementById('vp2faSecret')
+    const label = labelInput.value.trim()
+    const input = secretInput.value.trim()
+    if (!input) return alert('请输入密钥')
+
+    const parsed = parseOtpAuth(input)
+    const secret = parsed ? parsed.secret : input
+    const accounts = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]')
+    accounts.push({
+      id: Date.now().toString(36),
+      label: parsed?.label || label || '未命名账号',
+      secret
+    })
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(accounts))
+    labelInput.value = ''
+    secretInput.value = ''
+    renderList()
+  })
+
+  // 导出配置
+  document.getElementById('vp2faExportBtn').addEventListener('click', () => {
+    const data = JSON.stringify(JSON.parse(localStorage.getItem(STORAGE_KEY) || []), null, 2)
+    navigator.clipboard.writeText(data)
+    showToast('配置已复制到剪贴板')
+  })
+
+  // 导入配置
+  document.getElementById('vp2faImportBtn').addEventListener('click', () => {
+    const raw = prompt('请粘贴之前导出的 JSON 配置：')
+    if (!raw) return
+    try {
+      const imported = JSON.parse(raw)
+      if (!Array.isArray(imported)) throw new Error()
+      const accounts = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]')
+      imported.forEach(item => {
+        if (item.label && item.secret) {
+          accounts.push({
+            id: Date.now().toString(36) + Math.random().toString(36).slice(2),
+            label: item.label,
+            secret: item.secret
+          })
+        }
+      })
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(accounts))
+      renderList()
+      alert('导入成功')
+    } catch {
+      alert('JSON 格式错误，导入失败')
+    }
+  })
+
+  // 清空全部
+  document.getElementById('vp2faClearBtn').addEventListener('click', () => {
+    if (confirm('确定要清空所有账号吗？此操作不可恢复。')) {
+      localStorage.removeItem(STORAGE_KEY)
+      renderList()
+    }
+  })
+
+  // 初始化+定时刷新
   renderList()
   setInterval(renderList, 1000)
 })
