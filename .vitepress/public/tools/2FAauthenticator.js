@@ -1,25 +1,26 @@
 /* ============================================================
-   VitePress Safe 2FA Authenticator
-   Path: .vitepress/public/tool/2FAauthenticator.js
-   ✅ 零顶层 window 引用（不会被 Node.js 执行）
-   ✅ 零模块副作用
-   ✅ 纯 CSR，SSR 完全跳过
-   ✅ TOTP RFC 6238 兼容
+   2FA Authenticator - 纯浏览器脚本
+   不依赖任何外部库，零顶层 window 引用
    ============================================================ */
 
 (function () {
-  // 第一道防线：确认在浏览器环境
+  'use strict';
+
+  // ---- 环境检测 ----
   if (typeof window === 'undefined') return;
   if (typeof document === 'undefined') return;
-  if (!window.crypto || !window.crypto.subtle) return;
+  if (!window.crypto || !window.crypto.subtle) {
+    console.warn('[2FA] Web Crypto API not available');
+    return;
+  }
 
-  // ===== 配置常量 =====
-  var VP2FA_KEY = 'vp2fa_accounts';
+  // ---- 常量 ----
+  var STORAGE_KEY = 'vp2fa_accounts';
   var PERIOD = 30;
-  var CR = 16; // 圆环半径
-  var CC = 2 * Math.PI * CR; // 周长 ≈ 100.53
+  var RADIUS = 16;
+  var CIRCUMFERENCE = 2 * Math.PI * RADIUS;
 
-  // ===== Base32 解码（容错：跳过非法字符）=====
+  // ---- Base32 解码 ----
   function base32Decode(str) {
     var alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567';
     str = str.replace(/=+$/, '').toUpperCase().replace(/\s/g, '');
@@ -36,7 +37,7 @@
     return new Uint8Array(bytes);
   }
 
-  // ===== HMAC-SHA1 =====
+  // ---- HMAC-SHA1 ----
   function hmacSha1(key, data) {
     return crypto.subtle.importKey(
       'raw', key, { name: 'HMAC', hash: 'SHA-1' }, false, ['sign']
@@ -47,7 +48,7 @@
     });
   }
 
-  // ===== 生成 TOTP =====
+  // ---- 生成 TOTP ----
   function generateTotp(secretStr) {
     var key = base32Decode(secretStr);
     var counter = Math.floor(Date.now() / 1000 / PERIOD);
@@ -65,14 +66,14 @@
     });
   }
 
-  // ===== 解析 otpauth:// 链接 =====
+  // ---- 解析 otpauth:// ----
   function parseOtpAuth(uri) {
     try {
       var url = new URL(uri);
       if (url.protocol !== 'otpauth:') return null;
       var params = new URLSearchParams(url.search);
       return {
-        label: decodeURIComponent(url.pathname.split('/')[1] || '未命名账号'),
+        label: decodeURIComponent((url.pathname.split('/')[1]) || '未命名账号'),
         secret: params.get('secret')
       };
     } catch (e) {
@@ -80,14 +81,14 @@
     }
   }
 
-  // ===== HTML 转义（防 XSS）=====
+  // ---- HTML 转义 ----
   function esc(s) {
     var d = document.createElement('div');
     d.textContent = s;
     return d.innerHTML;
   }
 
-  // ===== Toast 提示 =====
+  // ---- Toast ----
   function showToast(msg, type) {
     var t = document.querySelector('.vp2fa-toast');
     if (!t) {
@@ -100,18 +101,29 @@
     setTimeout(function () { t.className = 'vp2fa-toast'; }, 2000);
   }
 
-  // ===== 渲染账号列表 =====
+  // ---- 读取账号列表 ----
+  function getAccounts() {
+    try {
+      return JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+    } catch (e) {
+      return [];
+    }
+  }
+
+  // ---- 保存账号列表 ----
+  function saveAccounts(list) {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(list));
+  }
+
+  // ---- 渲染列表 ----
   function renderList() {
     var list = document.getElementById('vp2faList');
-    if (!list) return;
-
-    var accounts;
-    try {
-      accounts = JSON.parse(localStorage.getItem(VP2FA_KEY) || '[]');
-    } catch (e) {
-      accounts = [];
+    if (!list) {
+      console.warn('[2FA] #vp2faList not found');
+      return;
     }
 
+    var accounts = getAccounts();
     list.innerHTML = '';
 
     if (accounts.length === 0) {
@@ -120,11 +132,11 @@
     }
 
     var remaining = PERIOD - Math.floor(Date.now() / 1000) % PERIOD;
-    var offset = CC * (remaining / PERIOD);
+    var offset = CIRCUMFERENCE * (remaining / PERIOD);
     var warnClass = remaining <= 5 ? 'warn' : '';
     var expClass = remaining <= 0 ? 'expired' : '';
 
-    // 串行生成，避免并发渲染错乱
+    // 串行生成，保证顺序
     var chain = Promise.resolve();
     accounts.forEach(function (acc) {
       chain = chain.then(function () {
@@ -139,8 +151,8 @@
             '<div class="vp2fa-actions">' +
               '<div class="vp2fa-timer ' + warnClass + ' ' + expClass + '">' +
                 '<svg viewBox="0 0 40 40">' +
-                  '<circle class="bg" cx="20" cy="20" r="' + CR + '"></circle>' +
-                  '<circle class="progress" cx="20" cy="20" r="' + CR + '" stroke-dasharray="' + CC + '" stroke-dashoffset="' + offset + '"></circle>' +
+                  '<circle class="bg" cx="20" cy="20" r="' + RADIUS + '"></circle>' +
+                  '<circle class="progress" cx="20" cy="20" r="' + RADIUS + '" stroke-dasharray="' + CIRCUMFERENCE + '" stroke-dashoffset="' + offset + '"></circle>' +
                 '</svg>' +
                 '<span class="vp2fa-timer-text">' + remaining + '</span>' +
               '</div>' +
@@ -157,10 +169,12 @@
     });
   }
 
-  // ===== 添加账号 =====
+  // ---- 添加账号 ----
   function addAccount() {
     var labelInput = document.getElementById('vp2faLabel');
     var secretInput = document.getElementById('vp2faSecret');
+    if (!labelInput || !secretInput) return;
+
     var label = labelInput.value.trim();
     var input = secretInput.value.trim();
 
@@ -170,18 +184,13 @@
     var secret = parsed ? parsed.secret : input;
     if (!parsed) label = label || '未命名账号';
 
-    var accounts;
-    try {
-      accounts = JSON.parse(localStorage.getItem(VP2FA_KEY) || '[]');
-    } catch (e) {
-      accounts = [];
-    }
+    var accounts = getAccounts();
     accounts.push({
       id: Date.now().toString(36),
       label: parsed && parsed.label ? parsed.label : label,
       secret: secret
     });
-    localStorage.setItem(VP2FA_KEY, JSON.stringify(accounts));
+    saveAccounts(accounts);
 
     labelInput.value = '';
     secretInput.value = '';
@@ -189,28 +198,14 @@
     showToast('已添加：' + label, 'success');
   }
 
-  // ===== 删除账号 =====
+  // ---- 删除账号 ----
   function deleteAccount(id) {
-    var accounts;
-    try {
-      accounts = JSON.parse(localStorage.getItem(VP2FA_KEY) || '[]');
-    } catch (e) {
-      accounts = [];
-    }
-    var target = null;
-    for (var i = 0; i < accounts.length; i++) {
-      if (accounts[i].id === id) { target = accounts[i]; break; }
-    }
-    var filtered = [];
-    for (var j = 0; j < accounts.length; j++) {
-      if (accounts[j].id !== id) filtered.push(accounts[j]);
-    }
-    localStorage.setItem(VP2FA_KEY, JSON.stringify(filtered));
+    var accounts = getAccounts().filter(function (a) { return a.id !== id; });
+    saveAccounts(accounts);
     renderList();
-    if (target) showToast('已删除：' + target.label);
   }
 
-  // ===== 复制验证码 =====
+  // ---- 复制验证码 ----
   function copyCode(code) {
     if (navigator.clipboard && navigator.clipboard.writeText) {
       navigator.clipboard.writeText(code).then(function () {
@@ -220,6 +215,7 @@
       fallbackCopy(code);
     }
   }
+
   function fallbackCopy(code) {
     var ta = document.createElement('textarea');
     ta.value = code;
@@ -230,18 +226,15 @@
     showToast('已复制：' + code, 'success');
   }
 
-  // ===== 导出配置 =====
+  // ---- 导出 ----
   function exportConfig() {
-    var accounts;
-    try {
-      accounts = JSON.parse(localStorage.getItem(VP2FA_KEY) || '[]');
-    } catch (e) {
-      accounts = [];
-    }
+    var accounts = getAccounts();
     if (accounts.length === 0) { showToast('没有可导出的账号', 'error'); return; }
+
     var data = JSON.stringify(accounts.map(function (a) {
       return { label: a.label, secret: a.secret };
     }), null, 2);
+
     if (navigator.clipboard && navigator.clipboard.writeText) {
       navigator.clipboard.writeText(data).then(function () {
         showToast('配置已复制到剪贴板', 'success');
@@ -250,6 +243,7 @@
       downloadBackup(data);
     }
   }
+
   function downloadBackup(data) {
     var blob = new Blob([data], { type: 'application/json' });
     var url = URL.createObjectURL(blob);
@@ -261,11 +255,12 @@
     showToast('配置已下载', 'success');
   }
 
-  // ===== 导入弹窗控制 =====
+  // ---- 导入弹窗 ----
   function showImportModal() {
     var m = document.getElementById('vp2faImportModal');
     if (m) m.classList.add('active');
   }
+
   function hideImportModal() {
     var m = document.getElementById('vp2faImportModal');
     var ta = document.getElementById('vp2faImportData');
@@ -273,21 +268,16 @@
     if (ta) ta.value = '';
   }
 
-  // ===== 导入配置 =====
   function importConfig() {
     var ta = document.getElementById('vp2faImportData');
     if (!ta) return;
     var raw = ta.value.trim();
     if (!raw) { showToast('请粘贴配置数据', 'error'); return; }
+
     try {
       var imported = JSON.parse(raw);
       if (!Array.isArray(imported)) throw new Error('格式错误');
-      var accounts;
-      try {
-        accounts = JSON.parse(localStorage.getItem(VP2FA_KEY) || '[]');
-      } catch (e) {
-        accounts = [];
-      }
+      var accounts = getAccounts();
       var count = 0;
       for (var i = 0; i < imported.length; i++) {
         var item = imported[i];
@@ -299,7 +289,7 @@
         });
         count++;
       }
-      localStorage.setItem(VP2FA_KEY, JSON.stringify(accounts));
+      saveAccounts(accounts);
       renderList();
       hideImportModal();
       showToast('成功导入 ' + count + ' 个账号', 'success');
@@ -308,28 +298,23 @@
     }
   }
 
-  // ===== 清空全部 =====
+  // ---- 清空全部 ----
   function clearAll() {
-    var accounts;
-    try {
-      accounts = JSON.parse(localStorage.getItem(VP2FA_KEY) || '[]');
-    } catch (e) {
-      accounts = [];
-    }
+    var accounts = getAccounts();
     if (accounts.length === 0) { showToast('没有账号可清除', 'error'); return; }
     if (confirm('确定删除全部 ' + accounts.length + ' 个账号？此操作不可恢复！')) {
-      localStorage.removeItem(VP2FA_KEY);
+      localStorage.removeItem(STORAGE_KEY);
       renderList();
       showToast('已全部清除', 'success');
     }
   }
 
-  // ===== 绑定事件 =====
+  // ---- 事件绑定 ----
   function bindEvents() {
-    // 列表按钮委托
-    var listEl = document.getElementById('vp2faList');
-    if (listEl) {
-      listEl.addEventListener('click', function (e) {
+    // 列表委托
+    var list = document.getElementById('vp2faList');
+    if (list) {
+      list.addEventListener('click', function (e) {
         var btn = e.target.closest('.vp2fa-btn');
         if (!btn) return;
         var action = btn.getAttribute('data-action');
@@ -338,11 +323,9 @@
       });
     }
 
-    // 添加按钮
     var addBtn = document.getElementById('vp2faAddBtn');
     if (addBtn) addBtn.addEventListener('click', addAccount);
 
-    // 工具按钮
     var expBtn = document.getElementById('vp2faExportBtn');
     if (expBtn) expBtn.addEventListener('click', exportConfig);
 
@@ -352,14 +335,12 @@
     var clrBtn = document.getElementById('vp2faClearBtn');
     if (clrBtn) clrBtn.addEventListener('click', clearAll);
 
-    // 导入弹窗按钮
     var impConf = document.getElementById('vp2faImportConfirm');
     if (impConf) impConf.addEventListener('click', importConfig);
 
     var impCanc = document.getElementById('vp2faImportCancel');
     if (impCanc) impCanc.addEventListener('click', hideImportModal);
 
-    // 回车提交
     var secInput = document.getElementById('vp2faSecret');
     if (secInput) {
       secInput.addEventListener('keydown', function (e) {
@@ -368,14 +349,16 @@
     }
   }
 
-  // ===== 初始化 =====
+  // ---- 初始化 ----
   function init() {
+    console.log('[2FA] Initializing...');
     bindEvents();
     renderList();
     setInterval(renderList, 1000);
+    console.log('[2FA] Ready');
   }
 
-  // 暴露到全局，供 MD 里的 <script> 手动调用（双保险）
+  // 暴露给全局（调试用）
   window.__initVP2FA = init;
 
   // 自动初始化
@@ -384,4 +367,5 @@
   } else {
     init();
   }
+
 })();
