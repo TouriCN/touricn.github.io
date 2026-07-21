@@ -1,3 +1,10 @@
+---
+title: 2FA 认证器
+head:
+  - - script
+    - src: /tool/2FAauthenticator.js
+      defer: true
+---
 # 2FA验证码密钥工具
 <ClientOnly>
 <style>
@@ -412,7 +419,6 @@
     </div>
     <button class="vp2fa-add-btn" id="vp2faAddBtn">+ 添加账号</button>
 
-    <!-- 工具按钮 -->
     <div class="vp2fa-tools">
       <button class="vp2fa-tool-btn" id="vp2faExportBtn">📤 导出配置</button>
       <button class="vp2fa-tool-btn" id="vp2faImportBtn">📥 导入配置</button>
@@ -433,12 +439,6 @@
     </div>
   </div>
 </div>
-
-<!-- ============================================================
-     ✅ 关键：用 src 引入，Vite 构建时完全跳过此文件
-     ✅ 路径对应 .vitepress/public/tool/2FAauthenticator.js
-     ============================================================ -->
-<script src="/tool/2FAauthenticator.js" data-vite-ignore></script>
 </ClientOnly>
 ## 该工具有什么用处？
 仅使用网页端，方便快捷使用；只需要输入账号名和需要使用的账户2FA密钥，即可生成对应的2FA验证码密钥，来方便有需时候使用，避免了有时候找不到2FA验证器应用的时候，无法登录自己的账户。
