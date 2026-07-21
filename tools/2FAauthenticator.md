@@ -1,7 +1,7 @@
 # 2FA验证码密钥工具
 
 <div class="vp2fa-root">
-  <!-- 初始为空，没加账号时什么都不显示，完全符合首次访问场景 -->
+  <!-- 初始为空，无账号时不显示任何内容，符合首次访问场景 -->
   <div id="vp2faList"></div>
 
   <div class="vp2fa-form">
@@ -25,7 +25,6 @@
 使用该工具极有可能会导致你的账户被盗！请尽量避免页面内容被他人看到，不要在不安全的设备上使用。
 
 <style>
-/* 样式和之前完全一致，无改动 */
 .vp2fa-root { margin: 1.5rem 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
 .vp2fa-card { display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; margin-bottom: 10px; background: #f6f8fa; border: 1px solid #d0d7de; border-radius: 12px; transition: border-color 0.2s; }
 .vp2fa-card:hover { border-color: #58a6ff; }
@@ -78,9 +77,6 @@
 <script setup>
 import { onMounted, nextTick } from 'vue'
 
-// 🔴 核心：SSR阶段直接退出，绝对不碰浏览器API，从根源避免白屏
-if (import.meta.env.SSR) return
-
 // ======================= 配置常量 =======================
 const STORAGE_KEY = 'vp2fa_accounts'
 const PERIOD = 30
@@ -88,6 +84,7 @@ const CIRCLE_RADIUS = 16
 const CIRCUMFERENCE = 2 * Math.PI * CIRCLE_RADIUS
 
 // ======================= 工具函数 =======================
+// 函数定义不会执行，SSR阶段安全
 const base32Decode = (str) => {
   const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567'
   str = str.replace(/=+$/, '').toUpperCase().replace(/\s/g, '')
@@ -146,7 +143,7 @@ const renderList = async () => {
   const accounts = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]')
   const remaining = PERIOD - Math.floor(Date.now() / 1000) % PERIOD
   const offset = CIRCUMFERENCE * (remaining / PERIOD)
-  list.innerHTML = '' // 没账号时这里就是空的，完全符合预期
+  list.innerHTML = '' // 无账号时为空，符合预期
 
   for (const acc of accounts) {
     const code = await generateTotp(acc.secret)
@@ -188,8 +185,9 @@ const showToast = (msg) => {
 }
 
 // ======================= 事件绑定 =======================
+// ✅ onMounted在SSR阶段完全不执行，天然规避浏览器API报错
 onMounted(async () => {
-  await nextTick() // 等DOM完全挂载，避免时序问题
+  await nextTick() // 等待DOM完全挂载，避免时序问题
 
   // 列表点击委托
   document.getElementById('vp2faList').addEventListener('click', (e) => {
