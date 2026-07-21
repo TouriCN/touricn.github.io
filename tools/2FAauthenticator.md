@@ -1,7 +1,7 @@
 # 2FA验证码密钥工具
 
 <div class="vp2fa-root">
-  <!-- 初始为空，无账号时不显示任何内容，符合首次访问场景 -->
+  <!-- 列表容器：无账号时自动显示空状态提示 -->
   <div id="vp2faList"></div>
 
   <div class="vp2fa-form">
@@ -52,6 +52,17 @@
 .vp2fa-tool-btn:hover { border-color: #58a6ff; color: #58a6ff; }
 .vp2fa-tool-btn.danger:hover { border-color: #f85149; color: #f85149; }
 
+/* 空状态样式：无账号时显示 */
+.vp2fa-empty {
+  color: #8b949e;
+  font-size: 14px;
+  padding: 32px 0;
+  text-align: center;
+  border-radius: 12px;
+  background: #f6f8fa;
+  border: 1px dashed #d0d7de;
+}
+
 @media (prefers-color-scheme: dark) {
   .vp2fa-card { background: #161b22; border-color: #30363d; }
   .vp2fa-label { color: #8b949e; }
@@ -65,6 +76,7 @@
   .vp2fa-add-btn:hover { border-color: #58a6ff; color: #58a6ff; }
   .vp2fa-tool-btn { background: #161b22; border-color: #30363d; color: #8b949e; }
   .vp2fa-tool-btn:hover { border-color: #58a6ff; color: #58a6ff; }
+  .vp2fa-empty { color: #6e7681; background: #161b22; border-color: #30363d; }
 }
 
 @media (max-width: 640px) {
@@ -77,14 +89,11 @@
 <script setup>
 import { onMounted, nextTick } from 'vue'
 
-// ======================= 配置常量 =======================
 const STORAGE_KEY = 'vp2fa_accounts'
 const PERIOD = 30
 const CIRCLE_RADIUS = 16
 const CIRCUMFERENCE = 2 * Math.PI * CIRCLE_RADIUS
 
-// ======================= 工具函数 =======================
-// 函数定义不会执行，SSR阶段安全
 const base32Decode = (str) => {
   const alphabet = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ234567'
   str = str.replace(/=+$/, '').toUpperCase().replace(/\s/g, '')
@@ -135,7 +144,7 @@ const parseOtpAuth = (uri) => {
   } catch { return null }
 }
 
-// ======================= 核心逻辑 =======================
+// 渲染账号列表：无账号时显示空状态，有账号时显示卡片
 const renderList = async () => {
   const list = document.getElementById('vp2faList')
   if (!list) return
@@ -143,32 +152,40 @@ const renderList = async () => {
   const accounts = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]')
   const remaining = PERIOD - Math.floor(Date.now() / 1000) % PERIOD
   const offset = CIRCUMFERENCE * (remaining / PERIOD)
-  list.innerHTML = '' // 无账号时为空，符合预期
 
-  for (const acc of accounts) {
+  // 无账号时显示空状态提示
+  if (accounts.length === 0) {
+    list.innerHTML = `<div class="vp2fa-empty">暂无账号，点击下方按钮添加你的第一个2FA验证码</div>`
+    return
+  }
+
+  // 有账号时生成所有卡片，一次性插入DOM
+  const cardPromises = accounts.map(async (acc) => {
     const code = await generateTotp(acc.secret)
-    const card = document.createElement('div')
-    card.className = 'vp2fa-card'
-    card.innerHTML = `
-      <div class="vp2fa-info">
-        <span class="vp2fa-label">${acc.label}</span>
-        <span class="vp2fa-code">${code.slice(0,3)} ${code.slice(3)}</span>
-      </div>
-      <div class="vp2fa-actions">
-        <div class="vp2fa-timer ${remaining <=5 ? 'warn' : ''} ${remaining <=0 ? 'expired' : ''}">
-          <svg viewBox="0 0 40 40">
-            <circle class="bg" cx="20" cy="20" r="${CIRCLE_RADIUS}"/>
-            <circle class="progress" cx="20" cy="20" r="${CIRCLE_RADIUS}"
-              stroke-dasharray="${CIRCUMFERENCE}" stroke-dashoffset="${offset}"/>
-          </svg>
-          <span class="vp2fa-timer-text">${remaining}</span>
+    return `
+      <div class="vp2fa-card">
+        <div class="vp2fa-info">
+          <span class="vp2fa-label">${acc.label}</span>
+          <span class="vp2fa-code">${code.slice(0,3)} ${code.slice(3)}</span>
         </div>
-        <button class="vp2fa-btn" data-action="copy" data-code="${code}">📋</button>
-        <button class="vp2fa-btn delete" data-action="delete" data-id="${acc.id}">🗑️</button>
+        <div class="vp2fa-actions">
+          <div class="vp2fa-timer ${remaining <=5 ? 'warn' : ''} ${remaining <=0 ? 'expired' : ''}">
+            <svg viewBox="0 0 40 40">
+              <circle class="bg" cx="20" cy="20" r="${CIRCLE_RADIUS}"/>
+              <circle class="progress" cx="20" cy="20" r="${CIRCLE_RADIUS}"
+                stroke-dasharray="${CIRCUMFERENCE}" stroke-dashoffset="${offset}"/>
+            </svg>
+            <span class="vp2fa-timer-text">${remaining}</span>
+          </div>
+          <button class="vp2fa-btn" data-action="copy" data-code="${code}">📋</button>
+          <button class="vp2fa-btn delete" data-action="delete" data-id="${acc.id}">🗑️</button>
+        </div>
       </div>
     `
-    list.appendChild(card)
-  }
+  })
+
+  const cardsHtml = await Promise.all(cardPromises)
+  list.innerHTML = cardsHtml.join('')
 }
 
 const showToast = (msg) => {
@@ -184,12 +201,10 @@ const showToast = (msg) => {
   setTimeout(() => toast.remove(), 1500)
 }
 
-// ======================= 事件绑定 =======================
-// ✅ onMounted在SSR阶段完全不执行，天然规避浏览器API报错
 onMounted(async () => {
-  await nextTick() // 等待DOM完全挂载，避免时序问题
+  await nextTick()
 
-  // 列表点击委托
+  // 列表点击委托：复制/删除账号
   document.getElementById('vp2faList').addEventListener('click', (e) => {
     const btn = e.target.closest('.vp2fa-btn')
     if (!btn) return
@@ -266,7 +281,7 @@ onMounted(async () => {
     }
   })
 
-  // 初始化+定时刷新
+  // 初始化+每秒刷新倒计时
   renderList()
   setInterval(renderList, 1000)
 })
