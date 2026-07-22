@@ -47,8 +47,8 @@
 
 ## 该工具有什么用处？
 仅使用网页端，方便快捷使用；支持Base32/Hex/纯数字等多种密钥格式，自动识别无需转换。<br>
-支持摄像头实时扫描、从相册读取二维码、直接粘贴otpauth://标准链接三种方式添加账号，粘贴链接时会自动识别为「平台 - 账户名」。<br>
-临时测试时随便输入字母即可生成模拟验证码，刷新页面后因不符合密钥规范自动失效，非常适合体验功能。
+支持摄像头实时扫描、从相册读取二维码、直接粘贴各类密码管理工具导出的otpauth://标准链接三种方式添加账号，粘贴链接时会自动识别为「平台 - 账户名」。<br>
+输入非规范密钥时仍可生成对应验证码，方便体验完整交互流程。
 
 ## 注意
 请尽量避免页面内容被他人看到，不要在不安全的设备上使用，否则你的账户可能会被盗取。(该网页仅提供2FA验证码输出，不会使用你的账户密钥做任何其他的事情。)
@@ -193,7 +193,7 @@ const decodeSecret = (str) => {
   while (bits.length < 80) bits += '0'.repeat(8)
   const bytes = []
   for (let i = 0; i < 80; i += 8) bytes.push(parseInt(bits.substr(i, 8), 2))
-  return { key: new Uint8Array(bytes), format: '测试', isTestMode: true }
+  return { key: new Uint8Array(bytes), format: '无效密钥', isTestMode: true }
 }
 
 const createHmacSigner = async (key) => {
@@ -221,7 +221,6 @@ const parseOtpAuth = (uri) => {
     const params = new URLSearchParams(url.search)
     const secret = params.get('secret')
     if (!secret) return null
-    
     const labelRaw = decodeURIComponent(url.pathname.split('/')[1] || '')
     let issuerFromLabel = '', account = labelRaw
     if (labelRaw.includes(':')) {
@@ -229,12 +228,10 @@ const parseOtpAuth = (uri) => {
       issuerFromLabel = labelRaw.substring(0, idx)
       account = labelRaw.substring(idx + 1)
     }
-    
     const issuerParam = params.get('issuer') || issuerFromLabel
-    const friendlyName = issuerParam 
+    const friendlyName = issuerParam
       ? (account ? `${issuerParam} - ${account}` : issuerParam)
       : (account || '未命名账号')
-    
     return { label: friendlyName, secret: secret }
   } catch { return null }
 }
@@ -271,10 +268,10 @@ const renderList = async () => {
             <div style="display:flex;align-items:center;">
               <span class="vp2fa-label">${acc.label}</span>
               <span class="vp2fa-format-tag">${format}</span>
-              ${isTestMode ? '<span class="vp2fa-test-tag">测试模式</span>' : ''}
+              ${isTestMode ? '<span class="vp2fa-test-tag">无效密钥</span>' : ''}
             </div>
             <span class="vp2fa-code">${code.slice(0,3)} ${code.slice(3)}</span>
-            ${isTestMode ? '<div class="vp2fa-test-hint">此为临时测试验证码，刷新页面后失效</div>' : ''}
+            ${isTestMode ? '<div class="vp2fa-test-hint">您输入的密钥并非符合规范的密钥，但是本工具仍然提供该密钥的验证码。</div>' : ''}
           </div>
           <div class="vp2fa-actions">
             <div class="vp2fa-timer ${remaining<=5?'warn':''} ${remaining<=0?'expired':''}">
@@ -310,8 +307,8 @@ const loadHtml5Qrcode = () => {
     if (window.Html5Qrcode) return resolve(window.Html5Qrcode)
     const script = document.createElement('script')
     script.src = 'https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/dist/html5-qrcode.min.js'
-    script.onload = () => { console.log('[2FA] 二维码库加载成功'); resolve(window.Html5Qrcode); }
-    script.onerror = () => { console.error('[2FA] 二维码库加载失败'); reject(new Error('二维码库加载失败')); }
+    script.onload = () => { console.log('[2FA] 二维码库加载成功'); resolve(window.Html5Qrcode) }
+    script.onerror = () => { console.error('[2FA] 二维码库加载失败'); reject(new Error('二维码库加载失败')) }
     document.head.appendChild(script)
   })
 }
@@ -331,7 +328,7 @@ const openScanModal = async () => {
   const confirmBtn = document.getElementById('vp2faScanConfirm')
   const region = document.getElementById('vp2faScanRegion')
   const placeholder = region.querySelector('.vp2fa-scan-placeholder')
-  
+
   modal.style.display = 'flex'
   resultDiv.style.display = 'none'
   confirmBtn.style.display = 'none'
@@ -347,7 +344,6 @@ const openScanModal = async () => {
     const Html5Qrcode = await loadHtml5Qrcode()
     cameraScanner = new Html5Qrcode('vp2faScanRegion')
     const config = { fps: 10, qrbox: { width: 250, height: 250 } }
-    
     await cameraScanner.start(
       { facingMode: 'environment' },
       config,
@@ -365,7 +361,6 @@ const handleScanSuccess = (decodedText) => {
   const parsed = parseOtpAuth(decodedText)
   const resultDiv = document.getElementById('vp2faScanResult')
   const confirmBtn = document.getElementById('vp2faScanConfirm')
-  
   if (parsed && parsed.secret) {
     scannedOtpAuth = parsed
     resultDiv.innerHTML = `✅ 识别成功！<br>账号：<b>${parsed.label}</b><br>密钥：<code>${parsed.secret}</code>`
@@ -414,26 +409,26 @@ onMounted(async () => {
     const secret = parsed ? parsed.secret : input
     const decoded = decodeSecret(secret)
     if (!decoded || decoded.key.length < MIN_SECRET_BYTES) {
-      alert('密钥格式无效！<br><br>✅ 支持的格式：<br>1. Base32（如JBSWY3DPEHPK3PXP）<br>2. Hex（如DEADBEEF12345678）<br>3. 数字串<br>4. otpauth://标准链接')
+      alert('密钥格式无效！\n\n✅ 支持的格式：\n1. Base32（如JBSWY3DPEHPK3PXP）\n2. Hex（如DEADBEEF12345678）\n3. 数字串\n4. otpauth://标准链接')
       return
     }
 
     const accounts = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]')
-    accounts.push({ 
-      id: Date.now().toString(36), 
-      label: parsed?.label || label || '未命名账号', 
-      secret 
+    accounts.push({
+      id: Date.now().toString(36),
+      label: parsed?.label || label || '未命名账号',
+      secret
     })
     localStorage.setItem(STORAGE_KEY, JSON.stringify(accounts))
     labelInput.value = ''; secretInput.value = ''
     renderList()
-    showToast(decoded.isTestMode ? '测试账号添加成功（刷新后失效）' : '账号添加成功')
+    showToast(decoded.isTestMode ? '已添加非规范密钥账号，本工具仍可生成对应验证码' : '账号添加成功')
   })
 
   document.getElementById('vp2faScanBtn').addEventListener('click', openScanModal)
   document.getElementById('vp2faScanClose').addEventListener('click', closeScanModal)
   document.getElementById('vp2faScanStop').addEventListener('click', closeScanModal)
-  
+
   document.getElementById('vp2faScanConfirm').addEventListener('click', () => {
     if (!scannedOtpAuth) return
     const accounts = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]')
@@ -457,18 +452,14 @@ onMounted(async () => {
   imageInput.addEventListener('change', async (e) => {
     const file = e.target.files[0]
     if (!file) return
-
     const resultDiv = document.getElementById('vp2faScanResult')
     showToast('正在解析图片...')
-    
     try {
       const Html5Qrcode = await loadHtml5Qrcode()
       if (!Html5Qrcode) throw new Error('二维码库未加载')
-      
       const fileScanner = new Html5Qrcode('vp2faFileScanRegion')
       const result = await fileScanner.scanFile(file, true)
       await fileScanner.clear()
-      
       console.log('[2FA] 图片解析结果：', result)
       handleScanSuccess(result)
     } catch (err) {
@@ -503,7 +494,7 @@ onMounted(async () => {
       })
       localStorage.setItem(STORAGE_KEY, JSON.stringify(accounts))
       renderList()
-      alert(`导入完成：<br>✅ 成功添加 ${added} 个有效账号<br>🧪 过滤 ${filtered} 个测试模式账号`)
+      alert(`导入完成：\n✅ 成功添加 ${added} 个有效账号\n🧪 过滤 ${filtered} 个非规范密钥账号`)
     } catch { alert('JSON 格式错误，导入失败') }
   })
 
