@@ -14,5 +14,5 @@ features:
     details: 念及于此，正仪芷汐
     link: https://www.zyzhixi.com
     linkText: 点击进入
-    icon: https://vip.123pan.cn/1813719654/yk6baz03t0l000dcjlwaksxm7yto9jfrDIYPDwUPBIQyAcxyAwJx.jpg
+    icon: <img src="https://vip.123pan.cn/1813719654/yk6baz03t0l000dcjlwaksxm7yto9jfrDIYPDwUPBIQyAcxyAwJx.jpg">
 ---
