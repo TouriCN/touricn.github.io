@@ -2,7 +2,7 @@
 
 输入字符演奏，乐谱可复制粘贴传播。规则：小写字母/数字=白键，Shift+字母（大写）=黑键。
 
-<!-- 双保险：ClientOnly保证SSR不碰这段，v-pre保证客户端Vue不解析这段HTML -->
+<!-- 双保险：ClientOnly保证SSR不碰这段，v-pre保证Vue不解析复杂HTML，彻底避免渲染问题 -->
 <ClientOnly>
   <div class="vp-piano" v-pre>
     <input 
@@ -85,10 +85,7 @@
 <script setup>
 import { onMounted } from 'vue'
 
-// 第一重兜底：服务端直接退出，绝对不碰document
-if (typeof window === 'undefined') return
-
-// 频率表
+// 频率表是纯常量，服务端执行完全没问题，不涉及任何浏览器API
 const FREQ = {
   '1':261.63,'2':293.66,'3':329.63,'4':349.23,'5':392.00,'6':440.00,'7':493.88,
   'q':523.25,'Q':554.37,'w':587.33,'W':622.25,'e':659.25,'r':698.46,'R':739.99,
@@ -99,8 +96,9 @@ const FREQ = {
   'z':3951.07,'x':4186.01
 };
 
+// onMounted的回调只会在客户端执行，服务端绝对不会碰里面的代码，完美规避所有SSR报错
 onMounted(() => {
-  // 所有DOM操作都锁死在onMounted里，客户端才会执行
+  // 所有浏览器API操作都锁死在这个回调里，100%安全
   const input = document.getElementById('piano-input');
   const currentNoteEl = document.getElementById('piano-current-note');
   const currentFreqEl = document.getElementById('piano-current-freq');
@@ -189,7 +187,7 @@ onMounted(() => {
 
   const stopAll = () => Object.keys(activeNodes).forEach(keyChar => stop(keyChar));
 
-  // 事件绑定
+  // 事件绑定全在onMounted里，服务端不会执行
   input.addEventListener('click', initAudio);
   input.addEventListener('input', (e) => {
     if (isComposing) return;
