@@ -2,8 +2,9 @@
 
 输入字符演奏，乐谱可复制粘贴传播。规则：小写字母/数字=白键，Shift+字母（大写）=黑键。
 
+<!-- 加v-pre，Vue直接跳过这段HTML的编译，再也不会报标签缺失的错误 -->
 <ClientOnly>
-<div class="vp-piano">
+<div class="vp-piano" v-pre>
   <!-- 输入框 -->
   <div class="vp-piano-input">
     <input type="text" class="vp-input" placeholder="输入字符演奏，例：QQ55tt5" id="piano-input">
@@ -15,7 +16,7 @@
     <span class="vp-freq" id="piano-current-freq">点击输入框激活音频</span>
   </div>
 
-  <!-- 钢琴键盘（纯HTML，SSR只输出静态标签） -->
+  <!-- 钢琴键盘（纯静态HTML，Vue不解析，只做客户端渲染） -->
   <div class="vp-piano-body">
     <!-- 数字排 C4-B4 -->
     <div class="vp-piano-row">
@@ -79,13 +80,13 @@
   <div class="vp-piano-hint">
     试玩示例：输入 <code>QQ55tt5 QQ44rr4</code> 演奏《小星星》
   </div>
+</div>
 </ClientOnly>
 
-<!-- ✅ 用 VitePress 原生支持的 script setup，所有浏览器操作丢到 onMounted 里 -->
+<!-- 原生JS逻辑，全部在onMounted里，SSR绝对不执行 -->
 <script setup>
 import { onMounted } from 'vue'
 
-// 频率表（A4=440Hz）
 const FREQ = {
   '1':261.63,'2':293.66,'3':329.63,'4':349.23,'5':392.00,'6':440.00,'7':493.88,
   'q':523.25,'Q':554.37,'w':587.33,'W':622.25,'e':659.25,'r':698.46,'R':739.99,
@@ -96,9 +97,7 @@ const FREQ = {
   'z':3951.07,'x':4186.01
 };
 
-// ✅ 所有 DOM/Window 操作全在 onMounted 里，SSR 阶段绝对不执行
 onMounted(() => {
-  // DOM 元素
   const input = document.getElementById('piano-input');
   const currentNoteEl = document.getElementById('piano-current-note');
   const currentFreqEl = document.getElementById('piano-current-freq');
@@ -108,31 +107,23 @@ onMounted(() => {
   const activeNodes = {};
   let isComposing = false;
 
-  // 初始化音频（仅用户首次交互时触发）
   const initAudio = () => {
-    if (!audioCtx) {
-      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    }
-    if (audioCtx.state === 'suspended') {
-      audioCtx.resume();
-    }
+    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    if (audioCtx.state === 'suspended') audioCtx.resume();
     currentFreqEl.textContent = '等待输入...';
   };
 
-  // 播放逻辑（和你之前要的完全一致）
   const play = (keyChar) => {
     if (!FREQ[keyChar] || activeNodes[keyChar]) return;
     initAudio();
     const now = audioCtx.currentTime;
 
-    // ADSR 包络：模拟钢琴敲击衰减
     const mainGain = audioCtx.createGain();
     mainGain.gain.setValueAtTime(0, now);
     mainGain.gain.linearRampToValueAtTime(0.3, now + 0.005);
     mainGain.gain.exponentialRampToValueAtTime(0.05, now + 0.2);
     mainGain.gain.exponentialRampToValueAtTime(0.001, now + 0.7);
 
-    // 泛音列：基频+2次谐波+3次谐波
     const oscFundamental = audioCtx.createOscillator();
     oscFundamental.type = 'sine';
     oscFundamental.frequency.value = FREQ[keyChar];
@@ -149,13 +140,11 @@ onMounted(() => {
     const gainHarmonic3 = audioCtx.createGain();
     gainHarmonic3.gain.value = 0.15;
 
-    // 低通滤波：消除电子感
     const lowpass = audioCtx.createBiquadFilter();
     lowpass.type = 'lowpass';
     lowpass.frequency.value = 4000;
     lowpass.Q.value = 1;
 
-    // 轻度混响：模拟琴房环境
     const reverbGain = audioCtx.createGain();
     reverbGain.gain.value = 0.12;
     const delay = audioCtx.createDelay();
@@ -163,7 +152,6 @@ onMounted(() => {
     const feedback = audioCtx.createGain();
     feedback.gain.value = 0.15;
 
-    // 连接链路
     oscFundamental.connect(mainGain);
     oscHarmonic2.connect(gainHarmonic2).connect(mainGain);
     oscHarmonic3.connect(gainHarmonic3).connect(mainGain);
@@ -177,12 +165,9 @@ onMounted(() => {
     oscHarmonic3.start(now);
 
     activeNodes[keyChar] = { oscillators: [oscFundamental, oscHarmonic2, oscHarmonic3], mainGain };
-
-    // UI 更新
     currentNoteEl.textContent = keyChar.length === 1 ? keyChar.toUpperCase() + (/[A-G]/.test(keyChar) && keyChar === keyChar.toUpperCase() ? '#' : '') : '--';
     currentFreqEl.textContent = `${FREQ[keyChar].toFixed(2)} Hz`;
-    const keyEl = document.querySelector(`.vp-key[data-k="${keyChar}"]`);
-    keyEl?.classList.add('active');
+    document.querySelector(`.vp-key[data-k="${keyChar}"]`)?.classList.add('active');
 
     setTimeout(() => stop(keyChar), 700);
   };
@@ -196,17 +181,12 @@ onMounted(() => {
     nodes.mainGain.gain.linearRampToValueAtTime(0, now + 0.03);
     nodes.oscillators.forEach(osc => osc.stop(now + 0.05));
     delete activeNodes[keyChar];
-    const keyEl = document.querySelector(`.vp-key[data-k="${keyChar}"]`);
-    keyEl?.classList.remove('active');
+    document.querySelector(`.vp-key[data-k="${keyChar}"]`)?.classList.remove('active');
   };
 
-  const stopAll = () => {
-    Object.keys(activeNodes).forEach(keyChar => stop(keyChar));
-  };
+  const stopAll = () => Object.keys(activeNodes).forEach(keyChar => stop(keyChar));
 
-  // 事件绑定（完全符合你要的输入触发逻辑）
   input.addEventListener('click', initAudio);
-
   input.addEventListener('input', (e) => {
     if (isComposing) return;
     const addedChars = e.target.value.slice(-1);
@@ -217,14 +197,9 @@ onMounted(() => {
 
   document.addEventListener('keydown', (e) => {
     if (e.repeat || e.ctrlKey || e.metaKey || e.altKey) return;
-    if (FREQ[e.key]) {
-      e.preventDefault();
-      play(e.key);
-    }
+    if (FREQ[e.key]) { e.preventDefault(); play(e.key); }
   });
-  document.addEventListener('keyup', (e) => {
-    if (FREQ[e.key]) stop(e.key);
-  });
+  document.addEventListener('keyup', (e) => { if (FREQ[e.key]) stop(e.key); });
 
   keys.forEach(keyEl => {
     keyEl.addEventListener('mousedown', () => play(keyEl.dataset.k));
@@ -233,14 +208,13 @@ onMounted(() => {
   });
 
   window.addEventListener('blur', stopAll);
-
   document.body.addEventListener('click', initAudio, { once: true });
   document.body.addEventListener('keydown', initAudio, { once: true });
 });
 </script>
 
 <style scoped>
-/* 样式和你之前生效的完全一致，不用改 */
+/* 样式完全不变，scoped会自动适配静态HTML */
 .vp-piano { margin: 1.5rem 0; font-family: var(--vp-font-family-base); }
 .vp-piano-input { margin-bottom: 12px; }
 .vp-input { width: 100%; padding: 10px 14px; font-size: 15px; font-family: var(--vp-font-family-mono); border: 1px solid var(--vp-c-divider); border-radius: 6px; background: var(--vp-c-bg-soft); color: var(--vp-c-text-1); outline: none; transition: border-color 0.2s, box-shadow 0.2s; }
