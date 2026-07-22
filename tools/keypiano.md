@@ -4,7 +4,7 @@
 
 <!-- 双保险：ClientOnly保证SSR不碰这段，v-pre保证Vue不解析复杂HTML，彻底避免渲染问题 -->
 <ClientOnly>
-  <div class="vp-piano" v-pre>
+  <div class="vp-piano">
     <input 
       id="piano-input"
       class="vp-input" 
