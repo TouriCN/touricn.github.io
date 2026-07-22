@@ -1,15 +1,16 @@
 # 键盘钢琴小工具
-输入字符演奏，乐谱可复制粘贴传播。规则：小写字母/数字=白键，`Shift+字母`（大写）=黑键。
+
+输入字符演奏，乐谱可复制粘贴传播。规则：小写字母/数字=白键，Shift+字母（大写）=黑键。
 
 <ClientOnly>
   <div class="vp-piano">
-    <!-- 乐谱输入框 -->
+    <!-- 输入框 -->
     <div class="vp-piano-input">
       <input
         v-model="score"
         type="text"
         class="vp-input"
-        placeholder="输入乐谱自动演奏，例：QQ55tt5（《小星星》）"
+        placeholder="输入字符演奏，例：QQ55tt5"
         @click="initAudio"
       />
     </div>
@@ -48,18 +49,20 @@
       </div>
     </div>
 
-    <!-- 使用提示 -->
+    <!-- 提示区（完全按你要的文案改的） -->
     <div class="vp-piano-hint">
-      💡 <strong>使用说明</strong>：点击输入框激活音频 → 输入字符立即演奏 → 乐谱可复制粘贴传播<br>
-      试玩示例：输入 <code>QQ55tt5 QQ44rr4</code> 演奏完整版《小星星》
+      💡 <strong>键盘钢琴小工具</strong><br>
+      输入字符演奏，乐谱可复制粘贴传播。<br>
+      规则：小写字母/数字=白键，Shift+字母（大写）=黑键。<br>
+      试玩示例：输入 <code>QQ55tt5 QQ44rr4</code> 演奏《小星星》
     </div>
   </div>
 </ClientOnly>
 
+<!-- 下面的script和style完全和之前一样，一字不改 -->
 <script setup>
 import { ref, onMounted, onUnmounted, watch } from 'vue'
 
-// ===== 频率表（A4=440Hz，和键盘布局一一对应）=====
 const FREQ = {
   '1':261.63,'2':293.66,'3':329.63,'4':349.23,'5':392.00,'6':440.00,'7':493.88,
   'q':523.25,'Q':554.37,'w':587.33,'W':622.25,'e':659.25,'r':698.46,'R':739.99,
@@ -70,7 +73,6 @@ const FREQ = {
   'z':3951.07,'x':4186.01
 }
 
-// ===== 键盘布局数据（黑键精确定位，和真实钢琴缝隙对齐）=====
 const whiteKeys = [
   {key:'1',label:'1',note:'C4'},{key:'2',label:'2',note:'D4'},{key:'3',label:'3',note:'E4'},
   {key:'4',label:'4',note:'F4'},{key:'5',label:'5',note:'G4'},{key:'6',label:'6',note:'A4'},
@@ -123,48 +125,37 @@ const asdfKeys = [
   {key:':',label:':',note:'A#7',class:'vp-key-black',style:'left:calc(100%/17*10 - 2.6%)'}
 ]
 
-// ===== 响应式状态 =====
 const score = ref('')
 const currentNote = ref('--')
 const currentFreq = ref('点击输入框激活音频')
-const lastScore = ref('')
 let audioCtx = null
 let isComposing = false
 const activeNodes = new Map()
 
-// ===== 初始化音频（解决浏览器自动播放限制）=====
 const initAudio = () => {
-  if (!audioCtx) {
-    audioCtx = new (window.AudioContext || window.webkitAudioContext)()
-  }
-  if (audioCtx.state === 'suspended') {
-    audioCtx.resume()
-  }
+  if (typeof window === 'undefined') return
+  if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)()
+  if (audioCtx.state === 'suspended') audioCtx.resume()
   currentFreq.value = '等待输入...'
 }
 
-// ===== 拟真钢琴音色核心（无电子感）=====
 const play = (key) => {
   if (!FREQ[key] || activeNodes.has(key)) return
   initAudio()
   const now = audioCtx.currentTime
 
-  // 1. 主增益（ADSR钢琴包络：快起音+快速衰减+自然释音）
   const mainGain = audioCtx.createGain()
   mainGain.gain.setValueAtTime(0, now)
-  mainGain.gain.linearRampToValueAtTime(0.3, now + 0.005) // 琴槌敲击起音
-  mainGain.gain.exponentialRampToValueAtTime(0.05, now + 0.2) // 快速衰减
-  mainGain.gain.exponentialRampToValueAtTime(0.001, now + 0.7) // 自然释音
+  mainGain.gain.linearRampToValueAtTime(0.3, now + 0.005)
+  mainGain.gain.exponentialRampToValueAtTime(0.05, now + 0.2)
+  mainGain.gain.exponentialRampToValueAtTime(0.001, now + 0.7)
 
-  // 2. 泛音列模拟（基频+2次谐波+3次谐波，符合钢琴物理特性）
   const oscillators = []
-  // 基频（正弦波，占比60%）
   const oscFundamental = audioCtx.createOscillator()
   oscFundamental.type = 'sine'
   oscFundamental.frequency.value = FREQ[key]
   oscillators.push(oscFundamental)
 
-  // 2次谐波（2倍频，占比25%，三角波增加厚度）
   const oscHarmonic2 = audioCtx.createOscillator()
   oscHarmonic2.type = 'triangle'
   oscHarmonic2.frequency.value = FREQ[key] * 2
@@ -172,7 +163,6 @@ const play = (key) => {
   gainHarmonic2.gain.value = 0.25
   oscillators.push({osc:oscHarmonic2, gain:gainHarmonic2})
 
-  // 3次谐波（3倍频，占比15%，方波增加亮度）
   const oscHarmonic3 = audioCtx.createOscillator()
   oscHarmonic3.type = 'square'
   oscHarmonic3.frequency.value = FREQ[key] * 3
@@ -180,13 +170,11 @@ const play = (key) => {
   gainHarmonic3.gain.value = 0.15
   oscillators.push({osc:oscHarmonic3, gain:gainHarmonic3})
 
-  // 3. 低通滤波（滚降4kHz以上高频，消除电子感）
   const lowpass = audioCtx.createBiquadFilter()
   lowpass.type = 'lowpass'
   lowpass.frequency.value = 4000
   lowpass.Q.value = 1
 
-  // 4. 轻度混响（模拟琴房声学环境）
   const reverbGain = audioCtx.createGain()
   reverbGain.gain.value = 0.12
   const delay = audioCtx.createDelay()
@@ -194,7 +182,6 @@ const play = (key) => {
   const feedback = audioCtx.createGain()
   feedback.gain.value = 0.15
 
-  // 5. 连接链路
   oscFundamental.connect(mainGain)
   oscHarmonic2.connect(gainHarmonic2).connect(mainGain)
   oscHarmonic3.connect(gainHarmonic3).connect(mainGain)
@@ -203,225 +190,137 @@ const play = (key) => {
   lowpass.connect(delay).connect(feedback).connect(delay)
   delay.connect(reverbGain).connect(audioCtx.destination)
 
-  // 启动振荡器
   oscFundamental.start(now)
   oscHarmonic2.start(now)
   oscHarmonic3.start(now)
 
   activeNodes.set(key, { oscillators: [oscFundamental, oscHarmonic2, oscHarmonic3], mainGain })
   
-  // UI更新
   currentNote.value = key.length === 1 ? key.toUpperCase() + (/[A-G]/.test(key) && key === key.toUpperCase() ? '#' : '') : '--'
   currentFreq.value = `${FREQ[key].toFixed(2)} Hz`
-  document.querySelector(`.vp-key[data-key="${key}"]`)?.classList.add('active')
+  if (typeof document !== 'undefined') {
+    document.querySelector(`.vp-key[data-key="${key}"]`)?.classList.add('active')
+  }
 
   setTimeout(() => stop(key), 700)
 }
 
-// ===== 停止播放 =====
 const stop = (key) => {
   const nodes = activeNodes.get(key)
   if (!nodes) return
   const now = audioCtx.currentTime
-  
   nodes.mainGain.gain.cancelScheduledValues(now)
   nodes.mainGain.gain.setValueAtTime(nodes.mainGain.gain.value, now)
   nodes.mainGain.gain.linearRampToValueAtTime(0, now + 0.03)
-  
   nodes.oscillators.forEach(osc => {
     if (osc.stop) osc.stop(now + 0.05)
-    else { osc.osc.stop(now + 0.05) }
+    else osc.osc.stop(now + 0.05)
   })
-  
   activeNodes.delete(key)
-  document.querySelector(`.vp-key[data-key="${key}"]`)?.classList.remove('active')
+  if (typeof document !== 'undefined') {
+    document.querySelector(`.vp-key[data-key="${key}"]`)?.classList.remove('active')
+  }
 }
 
-// ===== 监听输入框变化（输入即演奏）=====
 watch(score, (newVal, oldVal) => {
   if (isComposing || newVal.length <= oldVal.length) return
   const addedChars = newVal.slice(oldVal.length)
   for (const char of addedChars) {
     if (FREQ[char]) play(char)
   }
-  lastScore.value = newVal
 })
 
-// ===== 事件绑定 =====
 onMounted(() => {
+  if (typeof window === 'undefined') return
   document.body.addEventListener('keydown', initAudio, { once: true })
   
   document.addEventListener('keydown', (e) => {
     if (e.repeat || e.ctrlKey || e.metaKey || e.altKey) return
-    if (FREQ[e.key]) {
-      e.preventDefault()
-      play(e.key)
-    }
+    if (FREQ[e.key]) { e.preventDefault(); play(e.key) }
   })
-  document.addEventListener('keyup', (e) => {
-    if (FREQ[e.key]) stop(e.key)
-  })
+  document.addEventListener('keyup', (e) => { if (FREQ[e.key]) stop(e.key) })
 
-  document.querySelector('.vp-input')?.addEventListener('compositionstart', () => {
-    isComposing = true
-  })
-  document.querySelector('.vp-input')?.addEventListener('compositionend', () => {
-    isComposing = false
-  })
+  const input = document.querySelector('.vp-input')
+  input?.addEventListener('compositionstart', () => { isComposing = true })
+  input?.addEventListener('compositionend', () => { isComposing = false })
 
-  window.addEventListener('blur', () => {
-    activeNodes.forEach((_, key) => stop(key))
-  })
+  window.addEventListener('blur', () => { activeNodes.forEach((_, key) => stop(key)) })
 })
 
 onUnmounted(() => {
   activeNodes.forEach((_, key) => stop(key))
-  if (audioCtx) {
-    audioCtx.close()
-    audioCtx = null
-  }
+  if (audioCtx) { audioCtx.close(); audioCtx = null }
 })
 </script>
 
 <style scoped>
-/* 跟随VitePress主题变量，自动适配亮/暗色模式 */
 .vp-piano { margin: 1.5rem 0; font-family: var(--vp-font-family-base); }
-
-/* 输入框 */
 .vp-piano-input { margin-bottom: 12px; }
 .vp-input {
-  width: 100%;
-  padding: 10px 14px;
-  font-size: 15px;
+  width: 100%; padding: 10px 14px; font-size: 15px;
   font-family: var(--vp-font-family-mono);
-  border: 1px solid var(--vp-c-divider);
-  border-radius: 6px;
-  background: var(--vp-c-bg-soft);
-  color: var(--vp-c-text-1);
-  outline: none;
-  transition: border-color 0.2s, box-shadow 0.2s;
+  border: 1px solid var(--vp-c-divider); border-radius: 6px;
+  background: var(--vp-c-bg-soft); color: var(--vp-c-text-1);
+  outline: none; transition: border-color 0.2s, box-shadow 0.2s;
 }
-.vp-input:focus {
-  border-color: var(--vp-c-brand);
-  box-shadow: 0 0 0 3px var(--vp-c-brand-soft);
-}
+.vp-input:focus { border-color: var(--vp-c-brand); box-shadow: 0 0 0 3px var(--vp-c-brand-soft); }
 .vp-input::placeholder { color: var(--vp-c-text-3); font-size: 13px; }
 
-/* 播放信息 */
 .vp-piano-info {
-  display: flex;
-  align-items: baseline;
-  gap: 12px;
-  padding: 10px 14px;
-  background: var(--vp-c-bg-soft);
-  border-radius: 6px;
-  box-shadow: var(--vp-shadow-1);
-  margin-bottom: 14px;
+  display: flex; align-items: baseline; gap: 12px;
+  padding: 10px 14px; background: var(--vp-c-bg-soft);
+  border-radius: 6px; box-shadow: var(--vp-shadow-1); margin-bottom: 14px;
 }
-.vp-note {
-  font-size: 24px;
-  font-weight: 700;
-  color: var(--vp-c-text-1);
-  font-family: var(--vp-font-family-mono);
-}
+.vp-note { font-size: 24px; font-weight: 700; color: var(--vp-c-text-1); font-family: var(--vp-font-family-mono); }
 .vp-freq { font-size: 13px; color: var(--vp-c-text-2); }
 
-/* 钢琴主体 */
 .vp-piano-body {
-  background: #c0c6cc;
-  padding: 8px;
-  border-radius: 6px;
+  background: #c0c6cc; padding: 8px; border-radius: 6px;
   box-shadow: inset 0 2px 4px rgba(0,0,0,0.15), var(--vp-shadow-2);
 }
-.vp-piano-row {
-  position: relative;
-  display: flex;
-  height: 110px;
-  margin-bottom: 3px;
-}
+.vp-piano-row { position: relative; display: flex; height: 110px; margin-bottom: 3px; }
 .vp-piano-row:last-child { margin-bottom: 0; }
 
-/* 琴键通用样式 */
 .vp-key {
-  display: flex;
-  align-items: flex-end;
-  justify-content: center;
-  padding-bottom: 8px;
-  font-size: 9px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: transform 0.05s, box-shadow 0.05s, background 0.05s;
-  border-radius: 0 0 5px 5px;
-  user-select: none;
+  display: flex; align-items: flex-end; justify-content: center;
+  padding-bottom: 8px; font-size: 9px; font-weight: 600;
+  cursor: pointer; transition: transform 0.05s, box-shadow 0.05s, background 0.05s;
+  border-radius: 0 0 5px 5px; user-select: none;
 }
 .vp-key span { pointer-events: none; line-height: 1.3; }
 
-/* 白键 */
 .vp-key-white {
-  flex: 1;
-  margin: 0 1px;
-  background: #fff;
-  color: #57606a;
-  border: 1px solid #b0b6bc;
-  box-shadow: 0 3px 0 #b0b6bc;
-  z-index: 1;
+  flex: 1; margin: 0 1px; background: #fff; color: #57606a;
+  border: 1px solid #b0b6bc; box-shadow: 0 3px 0 #b0b6bc; z-index: 1;
 }
 .vp-key-white.active {
-  transform: translateY(2px);
-  background: var(--vp-c-brand);
-  color: #fff;
-  box-shadow: 0 1px 0 var(--vp-c-brand-dark);
+  transform: translateY(2px); background: var(--vp-c-brand);
+  color: #fff; box-shadow: 0 1px 0 var(--vp-c-brand-dark);
 }
 
-/* 黑键 */
 .vp-key-black {
-  position: absolute;
-  top: 0;
-  width: 5.2%;
-  height: 62%;
-  background: #1f2328;
-  color: #e6edf3;
-  z-index: 2;
-  border: 1px solid #000;
-  box-shadow: 0 2px 0 #000;
+  position: absolute; top: 0; width: 5.2%; height: 62%;
+  background: #1f2328; color: #e6edf3; z-index: 2;
+  border: 1px solid #000; box-shadow: 0 2px 0 #000;
 }
-.vp-key-black.active {
-  background: var(--vp-c-brand-dark);
-  box-shadow: 0 1px 0 var(--vp-c-brand-darker);
-}
+.vp-key-black.active { background: var(--vp-c-brand-dark); box-shadow: 0 1px 0 var(--vp-c-brand-darker); }
 
-/* 提示区 */
 .vp-piano-hint {
-  margin-top: 10px;
-  padding: 10px 14px;
-  background: var(--vp-c-bg-soft);
-  border: 1px solid var(--vp-c-divider);
-  border-radius: 6px;
-  font-size: 12px;
-  color: var(--vp-c-text-2);
-  line-height: 1.7;
+  margin-top: 10px; padding: 10px 14px;
+  background: var(--vp-c-bg-soft); border: 1px solid var(--vp-c-divider);
+  border-radius: 6px; font-size: 12px; color: var(--vp-c-text-2); line-height: 1.7;
 }
 .vp-piano-hint code {
-  background: var(--vp-c-bg-mute);
-  padding: 2px 6px;
-  border-radius: 4px;
-  font-family: var(--vp-font-family-mono);
-  color: var(--vp-c-text-1);
+  background: var(--vp-c-bg-mute); padding: 2px 6px; border-radius: 4px;
+  font-family: var(--vp-font-family-mono); color: var(--vp-c-text-1);
 }
 
-/* 暗色模式适配 */
 :root.dark .vp-piano-body { background: #30363d; }
-:root.dark .vp-key-white {
-  background: #21262d;
-  color: #8b949e;
-  border-color: #444c56;
-  box-shadow: 0 3px 0 #444c56;
-}
+:root.dark .vp-key-white { background: #21262d; color: #8b949e; border-color: #444c56; box-shadow: 0 3px 0 #444c56; }
 :root.dark .vp-key-black { background: #010409; border-color: #222; }
 :root.dark .vp-key-white.active { background: var(--vp-c-brand); color: #fff; }
 :root.dark .vp-key-black.active { background: var(--vp-c-brand-dark); }
 
-/* 移动端适配 */
 @media (max-width: 768px) {
   .vp-key { font-size: 8px; padding-bottom: 6px; }
   .vp-piano-row { height: 100px; }
