@@ -46,7 +46,8 @@ export default defineConfig({
     nav: [
       { text: '主页', link: '/' },
       { text: '文章', link: '/posts' },
-      { text: '工具', link: '/tools' }
+      { text: '工具', link: '/tools' },
+      { text: '友谊链接', link: '/friends.md' } 
     ],
     socialLinks: [
       { icon: 'github', link: 'https://github.com/TouriCN/touricn.github.io' },
