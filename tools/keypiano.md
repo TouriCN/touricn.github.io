@@ -15,7 +15,7 @@
     <span class="vp-freq" id="piano-current-freq">点击输入框激活音频</span>
   </div>
 
-  <!-- 钢琴键盘：纯 HTML 写死，SSR 只输出标签，绝不执行 JS -->
+  <!-- 钢琴键盘（纯HTML，SSR只输出静态标签） -->
   <div class="vp-piano-body">
     <!-- 数字排 C4-B4 -->
     <div class="vp-piano-row">
@@ -79,33 +79,33 @@
   <div class="vp-piano-hint">
     试玩示例：输入 <code>QQ55tt5 QQ44rr4</code> 演奏《小星星》
   </div>
-</div>
 </ClientOnly>
 
-<!-- 核心：加 client-only 属性，这段脚本 SSR 阶段完全忽略，只在浏览器执行 -->
-<script client-only>
-// 所有代码包在 DOMContentLoaded 里，双重保险，绝不会在服务端跑
-document.addEventListener('DOMContentLoaded', () => {
-  // 频率表（A4=440Hz）
-  const FREQ = {
-    '1':261.63,'2':293.66,'3':329.63,'4':349.23,'5':392.00,'6':440.00,'7':493.88,
-    'q':523.25,'Q':554.37,'w':587.33,'W':622.25,'e':659.25,'r':698.46,'R':739.99,
-    't':783.99,'T':830.61,'y':880.00,'Y':932.33,'u':987.77,'i':1046.50,'I':1108.73,
-    'o':1174.66,'O':1244.51,'p':1318.51,'a':1396.91,'A':1479.98,'s':1567.98,'S':1661.22,
-    'd':1760.00,'D':1864.66,'f':1975.53,'g':2093.00,'G':2217.46,'h':2349.32,'H':2489.02,
-    'j':2637.02,'k':2793.83,'K':2959.96,'l':3135.96,'L':3322.44,';':3520.00,':':3729.31,
-    'z':3951.07,'x':4186.01
-  };
+<!-- ✅ 用 VitePress 原生支持的 script setup，所有浏览器操作丢到 onMounted 里 -->
+<script setup>
+import { onMounted } from 'vue'
 
+// 频率表（A4=440Hz）
+const FREQ = {
+  '1':261.63,'2':293.66,'3':329.63,'4':349.23,'5':392.00,'6':440.00,'7':493.88,
+  'q':523.25,'Q':554.37,'w':587.33,'W':622.25,'e':659.25,'r':698.46,'R':739.99,
+  't':783.99,'T':830.61,'y':880.00,'Y':932.33,'u':987.77,'i':1046.50,'I':1108.73,
+  'o':1174.66,'O':1244.51,'p':1318.51,'a':1396.91,'A':1479.98,'s':1567.98,'S':1661.22,
+  'd':1760.00,'D':1864.66,'f':1975.53,'g':2093.00,'G':2217.46,'h':2349.32,'H':2489.02,
+  'j':2637.02,'k':2793.83,'K':2959.96,'l':3135.96,'L':3322.44,';':3520.00,':':3729.31,
+  'z':3951.07,'x':4186.01
+};
+
+// ✅ 所有 DOM/Window 操作全在 onMounted 里，SSR 阶段绝对不执行
+onMounted(() => {
   // DOM 元素
   const input = document.getElementById('piano-input');
   const currentNoteEl = document.getElementById('piano-current-note');
   const currentFreqEl = document.getElementById('piano-current-freq');
   const keys = document.querySelectorAll('.vp-key[data-k]');
 
-  // 音频上下文（延迟初始化，符合浏览器自动播放策略）
   let audioCtx = null;
-  const activeNodes = {}; // 用普通对象代替 Map，兼容性更好
+  const activeNodes = {};
   let isComposing = false;
 
   // 初始化音频（仅用户首次交互时触发）
@@ -119,7 +119,7 @@ document.addEventListener('DOMContentLoaded', () => {
     currentFreqEl.textContent = '等待输入...';
   };
 
-  // 播放逻辑（拟真钢琴音色）
+  // 播放逻辑（和你之前要的完全一致）
   const play = (keyChar) => {
     if (!FREQ[keyChar] || activeNodes[keyChar]) return;
     initAudio();
@@ -128,9 +128,9 @@ document.addEventListener('DOMContentLoaded', () => {
     // ADSR 包络：模拟钢琴敲击衰减
     const mainGain = audioCtx.createGain();
     mainGain.gain.setValueAtTime(0, now);
-    mainGain.gain.linearRampToValueAtTime(0.3, now + 0.005); // 起音
-    mainGain.gain.exponentialRampToValueAtTime(0.05, now + 0.2); // 衰减
-    mainGain.gain.exponentialRampToValueAtTime(0.001, now + 0.7); // 释音
+    mainGain.gain.linearRampToValueAtTime(0.3, now + 0.005);
+    mainGain.gain.exponentialRampToValueAtTime(0.05, now + 0.2);
+    mainGain.gain.exponentialRampToValueAtTime(0.001, now + 0.7);
 
     // 泛音列：基频+2次谐波+3次谐波
     const oscFundamental = audioCtx.createOscillator();
@@ -172,7 +172,6 @@ document.addEventListener('DOMContentLoaded', () => {
     lowpass.connect(delay).connect(feedback).connect(delay);
     delay.connect(reverbGain).connect(audioCtx.destination);
 
-    // 启动振荡器
     oscFundamental.start(now);
     oscHarmonic2.start(now);
     oscHarmonic3.start(now);
@@ -185,11 +184,9 @@ document.addEventListener('DOMContentLoaded', () => {
     const keyEl = document.querySelector(`.vp-key[data-k="${keyChar}"]`);
     keyEl?.classList.add('active');
 
-    // 700ms 后自动停止（匹配释音时长，无循环）
     setTimeout(() => stop(keyChar), 700);
   };
 
-  // 停止播放
   const stop = (keyChar) => {
     const nodes = activeNodes[keyChar];
     if (!nodes) return;
@@ -203,16 +200,13 @@ document.addEventListener('DOMContentLoaded', () => {
     keyEl?.classList.remove('active');
   };
 
-  // 停止所有声音
   const stopAll = () => {
     Object.keys(activeNodes).forEach(keyChar => stop(keyChar));
   };
 
-  // 事件绑定：所有 DOM 操作都在浏览器环境下执行
-  // 1. 输入框点击激活音频
+  // 事件绑定（完全符合你要的输入触发逻辑）
   input.addEventListener('click', initAudio);
 
-  // 2. 输入字符触发演奏
   input.addEventListener('input', (e) => {
     if (isComposing) return;
     const addedChars = e.target.value.slice(-1);
@@ -221,7 +215,6 @@ document.addEventListener('DOMContentLoaded', () => {
   input.addEventListener('compositionstart', () => { isComposing = true; });
   input.addEventListener('compositionend', () => { isComposing = false; });
 
-  // 3. 物理键盘触发
   document.addEventListener('keydown', (e) => {
     if (e.repeat || e.ctrlKey || e.metaKey || e.altKey) return;
     if (FREQ[e.key]) {
@@ -233,105 +226,44 @@ document.addEventListener('DOMContentLoaded', () => {
     if (FREQ[e.key]) stop(e.key);
   });
 
-  // 4. 鼠标点击琴键
   keys.forEach(keyEl => {
     keyEl.addEventListener('mousedown', () => play(keyEl.dataset.k));
     keyEl.addEventListener('mouseup', () => stop(keyEl.dataset.k));
     keyEl.addEventListener('mouseleave', () => stop(keyEl.dataset.k));
   });
 
-  // 5. 窗口失焦停止所有声音
   window.addEventListener('blur', stopAll);
 
-  // 6. 首次全局交互激活音频
   document.body.addEventListener('click', initAudio, { once: true });
   document.body.addEventListener('keydown', initAudio, { once: true });
 });
 </script>
 
 <style scoped>
-/* 跟随 VitePress 主题变量，自动适配亮/暗色模式 */
+/* 样式和你之前生效的完全一致，不用改 */
 .vp-piano { margin: 1.5rem 0; font-family: var(--vp-font-family-base); }
-
-/* 输入框 */
 .vp-piano-input { margin-bottom: 12px; }
-.vp-input {
-  width: 100%; padding: 10px 14px; font-size: 15px;
-  font-family: var(--vp-font-family-mono);
-  border: 1px solid var(--vp-c-divider); border-radius: 6px;
-  background: var(--vp-c-bg-soft); color: var(--vp-c-text-1);
-  outline: none; transition: border-color 0.2s, box-shadow 0.2s;
-}
+.vp-input { width: 100%; padding: 10px 14px; font-size: 15px; font-family: var(--vp-font-family-mono); border: 1px solid var(--vp-c-divider); border-radius: 6px; background: var(--vp-c-bg-soft); color: var(--vp-c-text-1); outline: none; transition: border-color 0.2s, box-shadow 0.2s; }
 .vp-input:focus { border-color: var(--vp-c-brand); box-shadow: 0 0 0 3px var(--vp-c-brand-soft); }
 .vp-input::placeholder { color: var(--vp-c-text-3); font-size: 13px; }
-
-/* 播放信息 */
-.vp-piano-info {
-  display: flex; align-items: baseline; gap: 12px;
-  padding: 10px 14px; background: var(--vp-c-bg-soft);
-  border-radius: 6px; box-shadow: var(--vp-shadow-1); margin-bottom: 14px;
-}
+.vp-piano-info { display: flex; align-items: baseline; gap: 12px; padding: 10px 14px; background: var(--vp-c-bg-soft); border-radius: 6px; box-shadow: var(--vp-shadow-1); margin-bottom: 14px; }
 .vp-note { font-size: 24px; font-weight: 700; color: var(--vp-c-text-1); font-family: var(--vp-font-family-mono); }
 .vp-freq { font-size: 13px; color: var(--vp-c-text-2); }
-
-/* 钢琴主体 */
-.vp-piano-body {
-  background: #c0c6cc; padding: 8px; border-radius: 6px;
-  box-shadow: inset 0 2px 4px rgba(0,0,0,0.15), var(--vp-shadow-2);
-}
+.vp-piano-body { background: #c0c6cc; padding: 8px; border-radius: 6px; box-shadow: inset 0 2px 4px rgba(0,0,0,0.15), var(--vp-shadow-2); }
 .vp-piano-row { position: relative; display: flex; height: 110px; margin-bottom: 3px; }
 .vp-piano-row:last-child { margin-bottom: 0; }
-
-/* 琴键通用样式 */
-.vp-key {
-  display: flex; align-items: flex-end; justify-content: center;
-  padding-bottom: 8px; font-size: 9px; font-weight: 600;
-  cursor: pointer; transition: transform 0.05s, box-shadow 0.05s, background 0.05s;
-  border-radius: 0 0 5px 5px; user-select: none;
-}
+.vp-key { display: flex; align-items: flex-end; justify-content: center; padding-bottom: 8px; font-size: 9px; font-weight: 600; cursor: pointer; transition: transform 0.05s, box-shadow 0.05s, background 0.05s; border-radius: 0 0 5px 5px; user-select: none; }
 .vp-key span { pointer-events: none; line-height: 1.3; }
-
-/* 白键 */
-.vp-key-white {
-  flex: 1; margin: 0 1px; background: #fff; color: #57606a;
-  border: 1px solid #b0b6bc; box-shadow: 0 3px 0 #b0b6bc; z-index: 1;
-}
-.vp-key-white.active {
-  transform: translateY(2px); background: var(--vp-c-brand);
-  color: #fff; box-shadow: 0 1px 0 var(--vp-c-brand-dark);
-}
-
-/* 黑键 */
-.vp-key-black {
-  position: absolute; top: 0; width: 5.2%; height: 62%;
-  background: #1f2328; color: #e6edf3; z-index: 2;
-  border: 1px solid #000; box-shadow: 0 2px 0 #000;
-}
+.vp-key-white { flex: 1; margin: 0 1px; background: #fff; color: #57606a; border: 1px solid #b0b6bc; box-shadow: 0 3px 0 #b0b6bc; z-index: 1; }
+.vp-key-white.active { transform: translateY(2px); background: var(--vp-c-brand); color: #fff; box-shadow: 0 1px 0 var(--vp-c-brand-dark); }
+.vp-key-black { position: absolute; top: 0; width: 5.2%; height: 62%; background: #1f2328; color: #e6edf3; z-index: 2; border: 1px solid #000; box-shadow: 0 2px 0 #000; }
 .vp-key-black.active { background: var(--vp-c-brand-dark); box-shadow: 0 1px 0 var(--vp-c-brand-darker); }
-
-/* 提示区 */
-.vp-piano-hint {
-  margin-top: 10px; padding: 10px 14px;
-  background: var(--vp-c-bg-soft); border: 1px solid var(--vp-c-divider);
-  border-radius: 6px; font-size: 12px; color: var(--vp-c-text-2); line-height: 1.7;
-}
-.vp-piano-hint code {
-  background: var(--vp-c-bg-mute); padding: 2px 6px; border-radius: 4px;
-  font-family: var(--vp-font-family-mono); color: var(--vp-c-text-1);
-}
-
-/* 暗色模式适配 */
+.vp-piano-hint { margin-top: 10px; padding: 10px 14px; background: var(--vp-c-bg-soft); border: 1px solid var(--vp-c-divider); border-radius: 6px; font-size: 12px; color: var(--vp-c-text-2); line-height: 1.7; }
+.vp-piano-hint code { background: var(--vp-c-bg-mute); padding: 2px 6px; border-radius: 4px; font-family: var(--vp-font-family-mono); color: var(--vp-c-text-1); }
 :root.dark .vp-piano-body { background: #30363d; }
 :root.dark .vp-key-white { background: #21262d; color: #8b949e; border-color: #444c56; box-shadow: 0 3px 0 #444c56; }
 :root.dark .vp-key-black { background: #010409; border-color: #222; }
 :root.dark .vp-key-white.active { background: var(--vp-c-brand); color: #fff; }
 :root.dark .vp-key-black.active { background: var(--vp-c-brand-dark); }
-
-/* 移动端适配 */
-@media (max-width: 768px) {
-  .vp-key { font-size: 8px; padding-bottom: 6px; }
-  .vp-piano-row { height: 100px; }
-  .vp-piano-info { flex-direction: column; gap: 6px; }
-  .vp-input { font-size: 14px; padding: 10px; }
-}
+@media (max-width: 768px) { .vp-key { font-size: 8px; padding-bottom: 6px; } .vp-piano-row { height: 100px; } .vp-piano-info { flex-direction: column; gap: 6px; } .vp-input { font-size: 14px; padding: 10px; } }
 </style>
