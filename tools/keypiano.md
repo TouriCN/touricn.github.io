@@ -2,7 +2,7 @@
 
 输入字符演奏，乐谱可复制粘贴传播。规则：小写字母/数字=白键，Shift+字母（大写）=黑键。
 
-<!-- 纯原生HTML，没有任何Vue指令，MD会直接渲染成DOM -->
+<!-- 纯原生HTML，无任何Vue指令，MD会直接渲染成DOM -->
 <div class="vp-piano">
   <input 
     id="piano-input"
@@ -14,7 +14,7 @@
     <span id="piano-current-freq" class="vp-freq">点击输入框激活音频</span>
   </div>
   
-  <!-- 第一排：数字键 C4-B4 -->
+  <!-- 琴键HTML（完整保留，和之前一致） -->
   <div class="vp-piano-row">
     <div class="vp-key vp-key-white" data-k="1"><span>1<br>C4</span></div>
     <div class="vp-key vp-key-white" data-k="2"><span>2<br>D4</span></div>
@@ -25,7 +25,6 @@
     <div class="vp-key vp-key-white" data-k="7"><span>7<br>B4</span></div>
   </div>
   
-  <!-- 第二排：QWERTY C5-E6 -->
   <div class="vp-piano-row">
     <div class="vp-key vp-key-white" data-k="q"><span>Q<br>C5</span></div>
     <div class="vp-key vp-key-black" data-k="Q" style="left:calc(100%/14*1 - 2.6%)"><span>Q<br>C#5</span></div>
@@ -46,7 +45,6 @@
     <div class="vp-key vp-key-white" data-k="p"><span>P<br>E6</span></div>
   </div>
   
-  <!-- 第三排：ASDF F6-A7 -->
   <div class="vp-piano-row">
     <div class="vp-key vp-key-white" data-k="a"><span>A<br>F6</span></div>
     <div class="vp-key vp-key-black" data-k="A" style="left:calc(100%/17*1 - 2.6%)"><span>A<br>F#6</span></div>
@@ -68,7 +66,6 @@
     <div class="vp-key vp-key-black" data-k=":" style="left:calc(100%/17*10 - 2.6%)"><span>:<br>A#7</span></div>
   </div>
   
-  <!-- 第四排：ZXCV B7-C8 -->
   <div class="vp-piano-row">
     <div class="vp-key vp-key-white" data-k="z"><span>Z<br>B7</span></div>
     <div class="vp-key vp-key-white" data-k="x"><span>X<br>C8</span></div>
@@ -79,144 +76,142 @@
   </div>
 </div>
 
-<!-- 原生script，无任何Vue语法，服务端执行直接退出 -->
+<!-- 核心修正：删掉顶层return，用条件判断包裹所有逻辑 -->
 <script>
-// 第一重兜底：服务端（Node环境）直接退出，不碰任何DOM
-if (typeof window === 'undefined') return;
+// 关键：不用return，而是判断window是否存在，存在才执行所有逻辑
+if (typeof window !== 'undefined') {
+  // 所有逻辑都在这个条件块里，服务端Node环境不会执行
+  document.addEventListener('DOMContentLoaded', function() {
+    const FREQ = {
+      '1':261.63,'2':293.66,'3':329.63,'4':349.23,'5':392.00,'6':440.00,'7':493.88,
+      'q':523.25,'Q':554.37,'w':587.33,'W':622.25,'e':659.25,'r':698.46,'R':739.99,
+      't':783.99,'T':830.61,'y':880.00,'Y':932.33,'u':987.77,'i':1046.50,'I':1108.73,
+      'o':1174.66,'O':1244.51,'p':1318.51,'a':1396.91,'A':1479.98,'s':1567.98,'S':1661.22,
+      'd':1760.00,'D':1864.66,'f':1975.53,'g':2093.00,'G':2217.46,'h':2349.32,'H':2489.02,
+      'j':2637.02,'k':2793.83,'K':2959.96,'l':3135.96,'L':3322.44,';':3520.00,':':3729.31,
+      'z':3951.07,'x':4186.01
+    };
 
-// 等DOM完全加载后再执行，确保所有HTML元素都已渲染
-document.addEventListener('DOMContentLoaded', function() {
-  // 频率表（纯常量，无浏览器API）
-  const FREQ = {
-    '1':261.63,'2':293.66,'3':329.63,'4':349.23,'5':392.00,'6':440.00,'7':493.88,
-    'q':523.25,'Q':554.37,'w':587.33,'W':622.25,'e':659.25,'r':698.46,'R':739.99,
-    't':783.99,'T':830.61,'y':880.00,'Y':932.33,'u':987.77,'i':1046.50,'I':1108.73,
-    'o':1174.66,'O':1244.51,'p':1318.51,'a':1396.91,'A':1479.98,'s':1567.98,'S':1661.22,
-    'd':1760.00,'D':1864.66,'f':1975.53,'g':2093.00,'G':2217.46,'h':2349.32,'H':2489.02,
-    'j':2637.02,'k':2793.83,'K':2959.96,'l':3135.96,'L':3322.44,';':3520.00,':':3729.31,
-    'z':3951.07,'x':4186.01
-  };
+    const input = document.getElementById('piano-input');
+    const currentNoteEl = document.getElementById('piano-current-note');
+    const currentFreqEl = document.getElementById('piano-current-freq');
+    const keys = document.querySelectorAll('.vp-key[data-k]');
 
-  const input = document.getElementById('piano-input');
-  const currentNoteEl = document.getElementById('piano-current-note');
-  const currentFreqEl = document.getElementById('piano-current-freq');
-  const keys = document.querySelectorAll('.vp-key[data-k]');
+    let audioCtx = null;
+    const activeNodes = {};
+    let isComposing = false;
 
-  let audioCtx = null;
-  const activeNodes = {};
-  let isComposing = false;
+    const initAudio = () => {
+      if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      if (audioCtx.state === 'suspended') audioCtx.resume();
+      currentFreqEl.textContent = '等待输入...';
+    };
 
-  const initAudio = () => {
-    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-    if (audioCtx.state === 'suspended') audioCtx.resume();
-    currentFreqEl.textContent = '等待输入...';
-  };
+    const play = (keyChar) => {
+      if (!FREQ[keyChar] || activeNodes[keyChar]) return;
+      initAudio();
+      const now = audioCtx.currentTime;
 
-  const play = (keyChar) => {
-    if (!FREQ[keyChar] || activeNodes[keyChar]) return;
-    initAudio();
-    const now = audioCtx.currentTime;
+      const mainGain = audioCtx.createGain();
+      mainGain.gain.setValueAtTime(0, now);
+      mainGain.gain.linearRampToValueAtTime(0.3, now + 0.005);
+      mainGain.gain.exponentialRampToValueAtTime(0.05, now + 0.2);
+      mainGain.gain.exponentialRampToValueAtTime(0.001, now + 0.7);
 
-    const mainGain = audioCtx.createGain();
-    mainGain.gain.setValueAtTime(0, now);
-    mainGain.gain.linearRampToValueAtTime(0.3, now + 0.005);
-    mainGain.gain.exponentialRampToValueAtTime(0.05, now + 0.2);
-    mainGain.gain.exponentialRampToValueAtTime(0.001, now + 0.7);
+      const oscFundamental = audioCtx.createOscillator();
+      oscFundamental.type = 'sine';
+      oscFundamental.frequency.value = FREQ[keyChar];
 
-    const oscFundamental = audioCtx.createOscillator();
-    oscFundamental.type = 'sine';
-    oscFundamental.frequency.value = FREQ[keyChar];
+      const oscHarmonic2 = audioCtx.createOscillator();
+      oscHarmonic2.type = 'triangle';
+      oscHarmonic2.frequency.value = FREQ[keyChar] * 2;
+      const gainHarmonic2 = audioCtx.createGain();
+      gainHarmonic2.gain.value = 0.25;
 
-    const oscHarmonic2 = audioCtx.createOscillator();
-    oscHarmonic2.type = 'triangle';
-    oscHarmonic2.frequency.value = FREQ[keyChar] * 2;
-    const gainHarmonic2 = audioCtx.createGain();
-    gainHarmonic2.gain.value = 0.25;
+      const oscHarmonic3 = audioCtx.createOscillator();
+      oscHarmonic3.type = 'square';
+      oscHarmonic3.frequency.value = FREQ[keyChar] * 3;
+      const gainHarmonic3 = audioCtx.createGain();
+      gainHarmonic3.gain.value = 0.15;
 
-    const oscHarmonic3 = audioCtx.createOscillator();
-    oscHarmonic3.type = 'square';
-    oscHarmonic3.frequency.value = FREQ[keyChar] * 3;
-    const gainHarmonic3 = audioCtx.createGain();
-    gainHarmonic3.gain.value = 0.15;
+      const lowpass = audioCtx.createBiquadFilter();
+      lowpass.type = 'lowpass';
+      lowpass.frequency.value = 4000;
+      lowpass.Q.value = 1;
 
-    const lowpass = audioCtx.createBiquadFilter();
-    lowpass.type = 'lowpass';
-    lowpass.frequency.value = 4000;
-    lowpass.Q.value = 1;
+      const reverbGain = audioCtx.createGain();
+      reverbGain.gain.value = 0.12;
+      const delay = audioCtx.createDelay();
+      delay.delayTime.value = 0.02;
+      const feedback = audioCtx.createGain();
+      feedback.gain.value = 0.15;
 
-    const reverbGain = audioCtx.createGain();
-    reverbGain.gain.value = 0.12;
-    const delay = audioCtx.createDelay();
-    delay.delayTime.value = 0.02;
-    const feedback = audioCtx.createGain();
-    feedback.gain.value = 0.15;
+      oscFundamental.connect(mainGain);
+      oscHarmonic2.connect(gainHarmonic2).connect(mainGain);
+      oscHarmonic3.connect(gainHarmonic3).connect(mainGain);
+      mainGain.connect(lowpass);
+      lowpass.connect(audioCtx.destination);
+      lowpass.connect(delay).connect(feedback).connect(delay);
+      delay.connect(reverbGain).connect(audioCtx.destination);
 
-    oscFundamental.connect(mainGain);
-    oscHarmonic2.connect(gainHarmonic2).connect(mainGain);
-    oscHarmonic3.connect(gainHarmonic3).connect(mainGain);
-    mainGain.connect(lowpass);
-    lowpass.connect(audioCtx.destination);
-    lowpass.connect(delay).connect(feedback).connect(delay);
-    delay.connect(reverbGain).connect(audioCtx.destination);
+      oscFundamental.start(now);
+      oscHarmonic2.start(now);
+      oscHarmonic3.start(now);
 
-    oscFundamental.start(now);
-    oscHarmonic2.start(now);
-    oscHarmonic3.start(now);
+      activeNodes[keyChar] = { oscillators: [oscFundamental, oscHarmonic2, oscHarmonic3], mainGain };
+      currentNoteEl.textContent = keyChar.length === 1 ? keyChar.toUpperCase() + (/[A-G]/.test(keyChar) && keyChar === keyChar.toUpperCase() ? '#' : '') : '--';
+      currentFreqEl.textContent = `${FREQ[keyChar].toFixed(2)} Hz`;
+      const keyEl = document.querySelector(`.vp-key[data-k="${keyChar}"]`);
+      if (keyEl) keyEl.classList.add('active');
 
-    activeNodes[keyChar] = { oscillators: [oscFundamental, oscHarmonic2, oscHarmonic3], mainGain };
-    currentNoteEl.textContent = keyChar.length === 1 ? keyChar.toUpperCase() + (/[A-G]/.test(keyChar) && keyChar === keyChar.toUpperCase() ? '#' : '') : '--';
-    currentFreqEl.textContent = `${FREQ[keyChar].toFixed(2)} Hz`;
-    const keyEl = document.querySelector(`.vp-key[data-k="${keyChar}"]`);
-    if (keyEl) keyEl.classList.add('active');
+      setTimeout(() => stop(keyChar), 700);
+    };
 
-    setTimeout(() => stop(keyChar), 700);
-  };
+    const stop = (keyChar) => {
+      const nodes = activeNodes[keyChar];
+      if (!nodes) return;
+      const now = audioCtx.currentTime;
+      nodes.mainGain.gain.cancelScheduledValues(now);
+      nodes.mainGain.gain.setValueAtTime(nodes.mainGain.gain.value, now);
+      nodes.mainGain.gain.linearRampToValueAtTime(0, now + 0.03);
+      nodes.oscillators.forEach(osc => osc.stop(now + 0.05));
+      delete activeNodes[keyChar];
+      const keyEl = document.querySelector(`.vp-key[data-k="${keyChar}"]`);
+      if (keyEl) keyEl.classList.remove('active');
+    };
 
-  const stop = (keyChar) => {
-    const nodes = activeNodes[keyChar];
-    if (!nodes) return;
-    const now = audioCtx.currentTime;
-    nodes.mainGain.gain.cancelScheduledValues(now);
-    nodes.mainGain.gain.setValueAtTime(nodes.mainGain.gain.value, now);
-    nodes.mainGain.gain.linearRampToValueAtTime(0, now + 0.03);
-    nodes.oscillators.forEach(osc => osc.stop(now + 0.05));
-    delete activeNodes[keyChar];
-    const keyEl = document.querySelector(`.vp-key[data-k="${keyChar}"]`);
-    if (keyEl) keyEl.classList.remove('active');
-  };
+    const stopAll = () => Object.keys(activeNodes).forEach(keyChar => stop(keyChar));
 
-  const stopAll = () => Object.keys(activeNodes).forEach(keyChar => stop(keyChar));
+    input.addEventListener('click', initAudio);
+    input.addEventListener('input', (e) => {
+      if (isComposing) return;
+      const addedChars = e.target.value.slice(-1);
+      if (FREQ[addedChars]) play(addedChars);
+    });
+    input.addEventListener('compositionstart', () => { isComposing = true; });
+    input.addEventListener('compositionend', () => { isComposing = false; });
 
-  // 事件绑定
-  input.addEventListener('click', initAudio);
-  input.addEventListener('input', (e) => {
-    if (isComposing) return;
-    const addedChars = e.target.value.slice(-1);
-    if (FREQ[addedChars]) play(addedChars);
+    document.addEventListener('keydown', (e) => {
+      if (e.repeat || e.ctrlKey || e.metaKey || e.altKey) return;
+      if (FREQ[e.key]) { e.preventDefault(); play(e.key); }
+    });
+    document.addEventListener('keyup', (e) => { if (FREQ[e.key]) stop(e.key); });
+
+    keys.forEach(keyEl => {
+      keyEl.addEventListener('mousedown', () => play(keyEl.dataset.k));
+      keyEl.addEventListener('mouseup', () => stop(keyEl.dataset.k));
+      keyEl.addEventListener('mouseleave', () => stop(keyEl.dataset.k));
+    });
+
+    window.addEventListener('blur', stopAll);
+    document.body.addEventListener('click', initAudio, { once: true });
+    document.body.addEventListener('keydown', initAudio, { once: true });
   });
-  input.addEventListener('compositionstart', () => { isComposing = true; });
-  input.addEventListener('compositionend', () => { isComposing = false; });
-
-  document.addEventListener('keydown', (e) => {
-    if (e.repeat || e.ctrlKey || e.metaKey || e.altKey) return;
-    if (FREQ[e.key]) { e.preventDefault(); play(e.key); }
-  });
-  document.addEventListener('keyup', (e) => { if (FREQ[e.key]) stop(e.key); });
-
-  keys.forEach(keyEl => {
-    keyEl.addEventListener('mousedown', () => play(keyEl.dataset.k));
-    keyEl.addEventListener('mouseup', () => stop(keyEl.dataset.k));
-    keyEl.addEventListener('mouseleave', () => stop(keyEl.dataset.k));
-  });
-
-  window.addEventListener('blur', stopAll);
-  document.body.addEventListener('click', initAudio, { once: true });
-  document.body.addEventListener('keydown', initAudio, { once: true });
-});
+}
 </script>
 
 <style>
-/* 无scoped，纯原生CSS，直接作用于上面的HTML */
+/* 纯原生CSS，无scoped，直接作用于HTML */
 .vp-piano { margin: 1.5rem 0; font-family: var(--vp-font-family-base); }
 .vp-input { width: 100%; padding: 10px 14px; font-size: 15px; font-family: var(--vp-font-family-mono); border: 1px solid var(--vp-c-divider); border-radius: 6px; background: var(--vp-c-bg-soft); color: var(--vp-c-text-1); outline: none; transition: border-color 0.2s, box-shadow 0.2s; }
 .vp-input:focus { border-color: var(--vp-c-brand); box-shadow: 0 0 0 3px var(--vp-c-brand-soft); }
