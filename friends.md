@@ -1,7 +1,7 @@
 ---
 # https://vitepress.dev/reference/default-theme-home-page
 layout: home
-titleTemplate: 友链接力
+titleTemplate: 友谊链接
 
 hero:
   name: "友谊链接"
