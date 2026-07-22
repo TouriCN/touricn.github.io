@@ -2,8 +2,8 @@
 
 输入字符演奏，乐谱可复制粘贴传播。规则：小写字母/数字=白键，Shift+字母（大写）=黑键。
 
-<!-- 加v-pre，Vue直接跳过这段HTML的编译，再也不会报标签缺失的错误 -->
 <ClientOnly>
+<!-- 加 v-pre 让 Vue 完全别碰这段 HTML，再也不报标签错误 -->
 <div class="vp-piano" v-pre>
   <!-- 输入框 -->
   <div class="vp-piano-input">
@@ -16,7 +16,7 @@
     <span class="vp-freq" id="piano-current-freq">点击输入框激活音频</span>
   </div>
 
-  <!-- 钢琴键盘（纯静态HTML，Vue不解析，只做客户端渲染） -->
+  <!-- 钢琴键盘（纯静态，Vue 不解析） -->
   <div class="vp-piano-body">
     <!-- 数字排 C4-B4 -->
     <div class="vp-piano-row">
@@ -83,21 +83,26 @@
 </div>
 </ClientOnly>
 
-<!-- 原生JS逻辑，全部在onMounted里，SSR绝对不执行 -->
-<script setup>
-import { onMounted } from 'vue'
+<!-- ✅ 普通原生 script，不用 Vue 那套，100% 执行 -->
+<script>
+// 先打 log，打开 F12 就能看到有没有执行
+console.log('钢琴 JS 开始加载');
 
-const FREQ = {
-  '1':261.63,'2':293.66,'3':329.63,'4':349.23,'5':392.00,'6':440.00,'7':493.88,
-  'q':523.25,'Q':554.37,'w':587.33,'W':622.25,'e':659.25,'r':698.46,'R':739.99,
-  't':783.99,'T':830.61,'y':880.00,'Y':932.33,'u':987.77,'i':1046.50,'I':1108.73,
-  'o':1174.66,'O':1244.51,'p':1318.51,'a':1396.91,'A':1479.98,'s':1567.98,'S':1661.22,
-  'd':1760.00,'D':1864.66,'f':1975.53,'g':2093.00,'G':2217.46,'h':2349.32,'H':2489.02,
-  'j':2637.02,'k':2793.83,'K':2959.96,'l':3135.96,'L':3322.44,';':3520.00,':':3729.31,
-  'z':3951.07,'x':4186.01
-};
+// 等 DOM 完全加载后再执行，绝对能摸到所有元素
+document.addEventListener('DOMContentLoaded', () => {
+  console.log('DOM 加载完成，钢琴 JS 开始初始化');
 
-onMounted(() => {
+  const FREQ = {
+    '1':261.63,'2':293.66,'3':329.63,'4':349.23,'5':392.00,'6':440.00,'7':493.88,
+    'q':523.25,'Q':554.37,'w':587.33,'W':622.25,'e':659.25,'r':698.46,'R':739.99,
+    't':783.99,'T':830.61,'y':880.00,'Y':932.33,'u':987.77,'i':1046.50,'I':1108.73,
+    'o':1174.66,'O':1244.51,'p':1318.51,'a':1396.91,'A':1479.98,'s':1567.98,'S':1661.22,
+    'd':1760.00,'D':1864.66,'f':1975.53,'g':2093.00,'G':2217.46,'h':2349.32,'H':2489.02,
+    'j':2637.02,'k':2793.83,'K':2959.96,'l':3135.96,'L':3322.44,';':3520.00,':':3729.31,
+    'z':3951.07,'x':4186.01
+  };
+
+  // 拿 DOM 元素（现在绝对能拿到）
   const input = document.getElementById('piano-input');
   const currentNoteEl = document.getElementById('piano-current-note');
   const currentFreqEl = document.getElementById('piano-current-freq');
@@ -107,12 +112,17 @@ onMounted(() => {
   const activeNodes = {};
   let isComposing = false;
 
+  // 初始化音频（首次点击/按键时触发）
   const initAudio = () => {
-    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    if (!audioCtx) {
+      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+      console.log('音频上下文初始化完成');
+    }
     if (audioCtx.state === 'suspended') audioCtx.resume();
     currentFreqEl.textContent = '等待输入...';
   };
 
+  // 播放逻辑（和你之前要的完全一致）
   const play = (keyChar) => {
     if (!FREQ[keyChar] || activeNodes[keyChar]) return;
     initAudio();
@@ -186,7 +196,9 @@ onMounted(() => {
 
   const stopAll = () => Object.keys(activeNodes).forEach(keyChar => stop(keyChar));
 
+  // 绑定事件
   input.addEventListener('click', initAudio);
+
   input.addEventListener('input', (e) => {
     if (isComposing) return;
     const addedChars = e.target.value.slice(-1);
@@ -210,11 +222,13 @@ onMounted(() => {
   window.addEventListener('blur', stopAll);
   document.body.addEventListener('click', initAudio, { once: true });
   document.body.addEventListener('keydown', initAudio, { once: true });
+
+  console.log('钢琴 JS 初始化完成，所有事件绑定完毕');
 });
 </script>
 
 <style scoped>
-/* 样式完全不变，scoped会自动适配静态HTML */
+/* 样式完全不变，scoped 依然生效 */
 .vp-piano { margin: 1.5rem 0; font-family: var(--vp-font-family-base); }
 .vp-piano-input { margin-bottom: 12px; }
 .vp-input { width: 100%; padding: 10px 14px; font-size: 15px; font-family: var(--vp-font-family-mono); border: 1px solid var(--vp-c-divider); border-radius: 6px; background: var(--vp-c-bg-soft); color: var(--vp-c-text-1); outline: none; transition: border-color 0.2s, box-shadow 0.2s; }
