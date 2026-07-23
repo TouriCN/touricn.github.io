@@ -15,6 +15,16 @@ features:
     link: https://www.zyzhixi.com
     linkText: 点击进入
     icon: <img src="https://vip.123pan.cn/1813719654/yk6baz03t0l000dcjlwaksxm7yto9jfrDIYPDwUPBIQyAcxyAwJx.jpg">
+  - title: Realite and Lord
+    details: 真实与正主
+    link: https://realityandlord.net
+    linkText: 点击进入
+    icon: <img src="https://realityandlord.net/wp-content/uploads/2026/03/cropped-TRUTH.png">
+  - title: BlackArea
+    details: 黑域
+    link: https://wiki.yddns.top/mediawiki/index.php?title=Main_Page
+    linkText: 点击进入
+    icon: <img src="https://wiki.yddns.top/mediawiki/resources/assets/Black Area.jpg">
 ---
 ## 评论区
 
