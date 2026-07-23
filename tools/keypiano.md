@@ -80,29 +80,22 @@
 if (typeof window !== 'undefined') {
   let audioCtx = null;
   let activeNodes = {};
-  let pianoCleanup = null;
+  let observer = null;
+  let isInitialized = false;
 
+  // 核心：钢琴初始化逻辑（完全保留你之前的功能）
   const initPiano = () => {
-    console.log('✅ 钢琴页已挂载（URL:', window.location.pathname, '）');
-    
-    // 清理旧实例（防止路由切换残留）
-    if (pianoCleanup) pianoCleanup();
-
-    // 只处理钢琴页，其他页面直接返回
-    if (!window.location.pathname.includes('/tools/keypiano')) {
-      console.log('当前不是钢琴页，跳过初始化');
-      return;
-    }
-
-    // 确认钢琴DOM已存在
+    // 防重复初始化
+    if (isInitialized) return;
+    // 只处理钢琴页
+    if (!window.location.pathname.includes('/tools/keypiano')) return;
+    // 确认钢琴DOM已经存在（你现在看到HTML正常，这个条件肯定满足）
     const pianoContainer = document.querySelector('.vp-piano');
-    if (!pianoContainer) {
-      console.log('钢琴DOM未找到，重试中...');
-      setTimeout(initPiano, 50); // 延迟50ms重试，确保DOM已渲染
-      return;
-    }
+    if (!pianoContainer) return;
 
-    // 频率表（完整保留）
+    console.log('✅ 钢琴JS已稳定启动（DOM确认存在）');
+    isInitialized = true;
+
     const FREQ = {
       '1':261.63,'2':293.66,'3':329.63,'4':349.23,'5':392.00,'6':440.00,'7':493.88,
       'q':523.25,'Q':554.37,'w':587.33,'W':622.25,'e':659.25,'r':698.46,'R':739.99,
@@ -113,26 +106,19 @@ if (typeof window !== 'undefined') {
       'z':3951.07,'x':4186.01
     };
 
-    // DOM元素
     const input = document.getElementById('piano-input');
     const currentNoteEl = document.getElementById('piano-current-note');
     const currentFreqEl = document.getElementById('piano-current-freq');
     const keys = document.querySelectorAll('.vp-key[data-k]');
 
-    // 防止重复初始化
-    if (input.dataset.pianoInit === 'true') return;
-    input.dataset.pianoInit = 'true';
-
     let isComposing = false;
 
-    // 初始化音频
     const initAudio = () => {
       if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
       if (audioCtx.state === 'suspended') audioCtx.resume();
       currentFreqEl.textContent = '等待输入...';
     };
 
-    // 播放逻辑
     const play = (keyChar) => {
       if (!FREQ[keyChar] || activeNodes[keyChar]) return;
       initAudio();
@@ -192,7 +178,6 @@ if (typeof window !== 'undefined') {
       setTimeout(() => stop(keyChar), 700);
     };
 
-    // 停止逻辑
     const stop = (keyChar) => {
       const nodes = activeNodes[keyChar];
       if (!nodes) return;
@@ -207,7 +192,7 @@ if (typeof window !== 'undefined') {
 
     const stopAll = () => Object.keys(activeNodes).forEach(keyChar => stop(keyChar));
 
-    // 事件绑定
+    // 所有事件绑定
     input.addEventListener('click', initAudio);
     input.addEventListener('input', (e) => {
       if (isComposing) return;
@@ -232,31 +217,61 @@ if (typeof window !== 'undefined') {
     window.addEventListener('blur', stopAll);
     document.body.addEventListener('click', initAudio, { once: true });
     document.body.addEventListener('keydown', initAudio, { once: true });
-
-    // 定义清理函数（路由切换时调用）
-    pianoCleanup = () => {
-      console.log('清理旧钢琴实例');
-      stopAll();
-      if (audioCtx) {
-        audioCtx.close().then(() => {
-          audioCtx = null;
-          activeNodes = {};
-        });
-      }
-      input.dataset.pianoInit = 'false';
-    };
   };
 
-  // VitePress路由事件监听
-  window.addEventListener('vitepress:page-loaded', initPiano);
+  // 核心：用MutationObserver盯着DOM，只要钢琴容器出现就立刻执行，不管跳转时机
+  const observePiano = () => {
+    observer = new MutationObserver((mutations) => {
+      mutations.forEach(mutation => {
+        // 检查新增的节点里有没有钢琴容器
+        if (mutation.addedNodes.length) {
+          for (let node of mutation.addedNodes) {
+            if (node.classList && node.classList.contains('vp-piano')) {
+              initPiano();
+              return;
+            }
+            // 检查子节点里有没有钢琴容器
+            const pianoNode = node.querySelector?.('.vp-piano');
+            if (pianoNode) {
+              initPiano();
+              return;
+            }
+          }
+        }
+      });
+    });
+
+    // 监听整个页面的DOM变化，包括子节点和后代节点
+    observer.observe(document.body, {
+      childList: true,
+      subtree: true
+    });
+
+    // 双保险：如果DOM已经存在（比如直接访问），立刻执行
+    if (document.querySelector('.vp-piano')) {
+      initPiano();
+    }
+  };
+
+  // 路由切换前清理
   window.addEventListener('vitepress:before-page-unload', () => {
-    if (pianoCleanup) pianoCleanup();
+    console.log('清理钢琴实例');
+    stopAll();
+    if (audioCtx) {
+      audioCtx.close().then(() => {
+        audioCtx = null;
+        activeNodes = {};
+      });
+    }
+    if (observer) {
+      observer.disconnect();
+      observer = null;
+    }
+    isInitialized = false;
   });
 
-  // 初始加载检查
-  if (document.readyState === 'complete' || document.readyState === 'interactive') {
-    initPiano();
-  }
+  // 启动监听
+  observePiano();
 }
 </script>
 
